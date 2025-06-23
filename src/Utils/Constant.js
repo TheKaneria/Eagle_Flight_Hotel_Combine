@@ -3,13 +3,15 @@ const BaseUrl2 = "https://erp.applified.co.in/eagleconnect/public/api/v1/";
 const BaseUrl = "https://omairiq.azurewebsites.net/";
 const AirIQLiveBaseUrl = "http://testairiq.mywebcheck.in/TravelAPI.svc/";
 
+const BusBaseUrl = "http://itsplatformv2.itspl.net/api/";
+
 export const ACCEPT_HEADER = "application/x.eagleconnect.v1+json";
 
-   const myHeaders = new Headers();
-    myHeaders.append("Accept", "application/x.eagleconnect.v1+json");
-    myHeaders.append("Content-Type", "application/json");
+const myHeaders = new Headers();
+myHeaders.append("Accept", "application/x.eagleconnect.v1+json");
+myHeaders.append("Content-Type", "application/json");
 
-    export const ACCEPT_HEADER1 =  myHeaders
+export const ACCEPT_HEADER1 = myHeaders;
 
 // API
 
@@ -37,15 +39,21 @@ export const suppliersearchcurl = BaseUrl2 + "suppliersearchcurl";
 export const supplierbookcurl = BaseUrl2 + "supplierbookcurl";
 export const supplierticketcurl = BaseUrl2 + "supplierticketcurl";
 
-
 // Air IQ API
 export const sectors = BaseUrl + "sectors";
 export const availability = BaseUrl + "availability";
 export const search = BaseUrl + "search";
 
-
-
 // Air IQ Live API
 export const login_airiq_live = AirIQLiveBaseUrl + "Login";
 export const availability_airiq_live = AirIQLiveBaseUrl + "Availability";
 export const getFareRule_airiq_live = AirIQLiveBaseUrl + "GetFareRule";
+
+// Bus API
+
+export const getcompanylist = BusBaseUrl + "GetCompanyList";
+export const getcurrentaccountbalance = BusBaseUrl + "GetCurrentAccountBalance";
+export const getcancellationpolicy = BusBaseUrl + "GetCancellationPolicy";
+export const getSources = BusBaseUrl + "GetSources";
+export const getDestination = BusBaseUrl + "GetDestinationsBasedOnSource";
+export const getRoutes = BusBaseUrl + "GetAvailableRoutes";

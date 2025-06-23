@@ -12,7 +12,11 @@ import { useDropzone } from "react-dropzone";
 import axios from "axios";
 import { FaUserPlus } from "react-icons/fa";
 import { MdDashboard, MdLogout } from "react-icons/md";
-import { ACCEPT_HEADER, get_state } from "../../Utils/Constant";
+import {
+  ACCEPT_HEADER,
+  get_state,
+  getcurrentaccountbalance,
+} from "../../Utils/Constant";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { GrGoogle } from "react-icons/gr";
 import { jwtDecode } from "jwt-decode";
@@ -619,6 +623,26 @@ const Navbar = () => {
     };
   }, []);
 
+  const BusGetCurrentAccountBalance = async () => {
+    try {
+      const response = axios.post(
+        getcurrentaccountbalance,
+        {
+          verifyCall: "ITS_UAT_74396040927B60436124249057b187C5erBNMLQo33ec3",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
+      console.log("Company List Navbar :", response.data.data);
+    } catch (error) {
+      console.error("API error:", error);
+    }
+  };
+
   return (
     <div className="container-fluid">
       <div className="container containernav">
@@ -679,9 +703,21 @@ const Navbar = () => {
                         hoverOpen ? "drop_down_content_open" : ""
                       }`}
                     >
+                      <div className="d-block d-md-none d-lg-block text-center mb-3">
+                        <div
+                          className="fs-6 fw-bold "
+                          style={{ color: "#362a60" }}
+                        >
+                          Current Balance
+                        </div>
+                        <div className="fw-bold" style={{ color: "#362a60" }}>
+                          &#8377; 4706243
+                        </div>
+                      </div>
+
                       {userr?.email && (
                         <div
-                          className="navlinks d-block d-md-none d-lg-block"
+                          className="navlinks text-center d-block d-md-none d-lg-block"
                           style={{
                             fontSize: "11px",
                             maxWidth: "100%",
@@ -706,6 +742,7 @@ const Navbar = () => {
                           Dashboard
                         </Link>
                       </div>
+
                       {/* <div
                         className="d-flex align-items-center w-100 gap-3"
                         style={{ marginBottom: "0.2rem" }}
@@ -769,7 +806,6 @@ const Navbar = () => {
             <button className="d-md-none menubtn" onClick={toggleMenu}>
               {isMenuOpen ? (
                 <RiCloseFill color="black" size={24} />
-                
               ) : (
                 <RiMenu3Fill color="black" size={24} />
               )}

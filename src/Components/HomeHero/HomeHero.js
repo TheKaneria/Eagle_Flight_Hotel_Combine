@@ -8,16 +8,20 @@ import {
   FaCar,
   FaIndianRupeeSign,
 } from "react-icons/fa6";
-import { BsBusFront } from "react-icons/bs";
+import { BsBusFront, BsBatteryCharging } from "react-icons/bs";
 import { IoAirplaneSharp } from "react-icons/io5";
 import { BiSolidPlaneAlt } from "react-icons/bi";
+import { LuLampDesk } from "react-icons/lu";
+import { GiWaterBottle } from "react-icons/gi";
 import {
   FaChevronDown,
   FaExchangeAlt,
   FaSearch,
   FaRupeeSign,
   FaSort,
+  FaWifi,
 } from "react-icons/fa";
+import { GoChevronDown } from "react-icons/go";
 import Select from "react-select";
 import makeAnimated from "react-select/animated";
 import {
@@ -25,6 +29,8 @@ import {
   ACCEPT_HEADER1,
   availabilitycurl,
   get_recent_search,
+  getcancellationpolicy,
+  getcompanylist,
   recent_search,
   searchcurl,
   sectorscurl,
@@ -49,6 +55,7 @@ import {
   useMotionValue,
   useAnimation,
 } from "framer-motion";
+import { useBusContext } from "../../Context/bus_context";
 
 const tabs = [
   { name: "Flights", icon: <FaPlaneDeparture size={25} />, key: "flights" },
@@ -61,7 +68,6 @@ const tabs = [
   },
 ];
 const options = ["Return", "One-way", "Multi-city"];
-
 const classes = ["Economy", "Business", "First"];
 
 const onewdatetest = [
@@ -72,6 +78,58 @@ const onewdatetest = [
 ];
 
 const Availdatetest = ["2025-05-04", "2025-05-04", "2025-05-05", "2025-05-06"];
+
+const statikDato = [
+  {
+    CityId: 1,
+    CityName: "Rajkot",
+  },
+  {
+    CityId: 2,
+    CityName: "Amdavad",
+  },
+  {
+    CityId: 3,
+    CityName: "Gondal",
+  },
+  {
+    CityId: 4,
+    CityName: "Porbandar",
+  },
+];
+
+const buses = [
+  {
+    RouteName: "Rajkot To Mumbai",
+    title: "Eagle Express",
+    BusTypeName: "A/C Sleeper",
+    ArrangementName: "2 X 1 (30) A/C SLEEPEREGULAR",
+    rating: 4.3,
+    reviews: 94,
+    CityTime: "17:00",
+    ArrivalTime: "20:30",
+    duration: "3h 30m",
+    EmptySeats: "36 Seats (12 Single)",
+    price: 300,
+    tag: "On Time",
+    tagColor: "#E3E7F0",
+  },
+  {
+    RouteName: "Rajkot To Mumbai",
+    title: "Eagle Express",
+    BusTypeName: "Volvo A/C Seater ",
+    ArrangementName: "2 X 2 (56) NON A/C SLEEPER COACH",
+    rating: 3.9,
+    reviews: 113,
+    CityTime: "06:45",
+    ArrivalTime: "10:00",
+    duration: "3h 15m",
+    EmptySeats: "44 Seats",
+    price: 300,
+    tag: "Direct Bus",
+    tagColor: "#E3E7F0",
+  },
+];
 
 const HomeHero = () => {
   const animatedComponents = makeAnimated();
@@ -131,24 +189,6 @@ const HomeHero = () => {
     setSelectedOption(opt);
     setIsOpen(false);
   };
-
-  // console.log("SELECTED", selected);
-
-  // const swapLocations = () => {
-  //   setIsSwapping(true);
-  //   const temp = from;
-  //   setFrom(to);
-  //   setTo(temp);
-
-  //   console.log("from",temp);
-  //   console.log("to",to);    
-
-  //   // Reset animation class after animation completes
-  //   setTimeout(() => setIsSwapping(false), 500); // Match with CSS duration
-  // };
-
-
-
   const swapLocations = () => {
     const newFrom = to;
     const newTo = from;
@@ -161,15 +201,6 @@ const HomeHero = () => {
     // Use new values directly instead of waiting for state update
     getOnwardDate(newFrom.city_code, newTo.city_code);
     dateAvailability(newFrom.city_code, newTo.city_code);
-  };
-
-
-
-  const handleScroll = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
   };
 
   const customStyles = {
@@ -302,7 +333,6 @@ const HomeHero = () => {
   const [sortedFlights, setsortedFlights] = useState([]);
   const [sortedCheapFlights, setsortedCheapFlights] = useState([]);
 
-
   const monthMap = {
     Jan: "01",
     Feb: "02",
@@ -329,20 +359,11 @@ const HomeHero = () => {
     { value: "late-arrival", label: "Late Arrival" },
   ];
 
-  // console.log("getSectorListTo2", getSectorListTo2);
-  // console.log("getSearchFlightListDataCheap", getSearchFlightListDataCheap);
-  // console.log("mergedData", mergedData);
-  // console.log("getSearchFlightListData", getSearchFlightListData);
-  // console.log("from",from);
-
   const [traveller, setTraveller] = useState("");
   const [date1, setDate1] = useState("");
   const [date2, setDate2] = useState("");
 
-  // Determine which price field to use based on getCondition
   const sortKey = getCondition ? "price" : "per_adult_child_price";
-
-  // Make a copy of each array and sort it by the chosen key in ascending order
 
   useEffect(() => {
     const sorted = [...getSearchFlightListData].sort(
@@ -355,88 +376,14 @@ const HomeHero = () => {
     );
 
     setsortedCheapFlights(sortedcheap);
-  }, [getSearchFlightListData, getSearchFlightListDataCheap])
-
-
-
-
-  // console.log("selectedxxx", selectedIndex);
+  }, [getSearchFlightListData, getSearchFlightListDataCheap]);
 
   const navigate = useNavigate();
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-  const toggleDropdown2 = () => {
-    setIsDropdownOpen2(!isDropdownOpen2);
-  };
-
-  const toggleView = () => {
-    setIsViewOpen(!isViewOpen);
-    setIsViewOpen2(false);
-  };
-
-  const toggleView2 = () => {
-    setIsViewOpen2(!isViewOpen2);
-    setIsViewOpen(false);
-  };
-
-  const toggleView3 = () => {
-    setIsViewOpen3(!isViewOpen3);
-  };
 
   const [getfiltercondation, setfiltercondation] = useState(false);
   const [getfilerdata, setfilterData] = useState([]);
   const [getfilerdata2, setfilterData2] = useState([]);
   const [recentswap, setrecentswap] = useState(0);
-
-  // console.log("recentswap",recentswap);
-
-
-
-
-  // const handleChanges = (item) => {
-  //   console.log('sorted', sortedFlights);
-
-
-  //   if (item.value === "early-departure") {
-  //     setfiltercondation(true);
-  //     const sortedByDeparture = sortedFlights.sort((a, b) => {
-  //       const timeA = new Date(`${a.departure_date} ${a.departure_time}`);
-  //       const timeB = new Date(`${b.departure_date} ${b.departure_time}`);
-  //       return timeA - timeB;
-  //     });
-  //     setfilterData(sortedByDeparture);
-  //   }else if(item.value === 'late-departure'){
-  //     setfiltercondation(true);
-  //     const sortedByDeparture = sortedFlights.sort((a, b) => {
-  //       const timeA = new Date(`${a.departure_date} ${a.departure_time}`);
-  //       const timeB = new Date(`${b.departure_date} ${b.departure_time}`);
-  //       return timeB - timeA;
-  //     });
-  //     setfilterData(sortedByDeparture);
-  //   }else if(item.value === 'early-arrival'){
-  //     setfiltercondation(true);
-  //     const sortedByDeparture = sortedFlights.sort((a, b) => {
-  //       const timeA = new Date(`${a.arival_date} ${a.arival_time}`);
-  //       const timeB = new Date(`${b.arival_date} ${b.arival_time}`);
-  //       return timeA - timeB;
-  //     });
-  //     setfilterData(sortedByDeparture);
-  //   }else if(item.value === 'late-arrival'){
-  //     setfiltercondation(true);
-  //     const sortedByDeparture = sortedFlights.sort((a, b) => {
-  //       const timeA = new Date(`${a.arival_date} ${a.arival_time}`);
-  //       const timeB = new Date(`${b.arival_date} ${b.arival_time}`);
-  //       return timeB - timeA;
-  //     });
-  //     setfilterData(sortedByDeparture);
-  //   }else {
-  //     setfiltercondation(false);
-  //   }
-  // };
-
-  // console.log("getSectorListTo", getSectorListTo);
 
   const handleChanges = (item) => {
     console.log("sorted", sortedFlights);
@@ -482,266 +429,13 @@ const HomeHero = () => {
     }
   };
 
-
-  // const handleSelect = async (item) => {
-  //   if (!item) {
-  //     setFrom(null);
-  //     return;
-  //   } else {
-  //     // if (item.source === "getSectorListNew") {
-  //     //   setCondition(0);
-  //     const selectedCity = item.city_name;
-  //     const airportCode = item.airport_code;
-
-  //     console.log("selectedCity", selectedCity);
-
-  //     setDepCityCode(airportCode ? airportCode : item.city_code);
-  //     setSelectedValue(`${selectedCity} (${airportCode})`);
-  //     setIsDropdownOpen(false);
-  //     setSelectedValue2("");
-  //     setTo("");
-  //     setSearchTerm("");
-  //     setSearchTerm2("");
-  //     setSelectedDate(null);
-  //     setDate1("");
-  //     setSearchFlightListData([]);
-  //     setSearchFlightListDataCheap([]);
-  //     setDefaultMonth("");
-  //     setSelectedIndex(null);
-
-  //     console.log("getSectorListNew", getSectorListNew);
-
-  //     // const filteredSectors = getSectorListNew
-  //     //   .filter((sector) => sector.Sector.startsWith(selectedCity + " //"))
-  //     //   .map((sector) => ({
-  //     //     destination: sector.Sector.split(" // ")[1].trim(),
-  //     //     DestinationCode: sector.Destination,
-  //     //   }))
-  //     //   .sort((a, b) => a.destination.localeCompare(b.destination));
-
-  //     // setSectorListTo(filteredSectors);
-  //     // console.log("filteredSectors", filteredSectors);
-
-  //     const filteredSectors = getSectorListNew
-  //       .filter((sector) => {
-  //         const [originCity] = sector.Sector.split(" // ");
-  //         return originCity.trim() === selectedCity;
-  //       })
-  //       .map((sector) => ({
-  //         destination: sector.Sector.split(" // ")[1].trim(),
-  //         DestinationCode: sector.Destination,
-  //       }))
-  //       .sort((a, b) => a.destination.localeCompare(b.destination));
-
-  //     console.log("Filtered Sectors", filteredSectors);
-  //     setSectorListTo(filteredSectors);
-
-  //     // } else if (item.source === "getDepatureCityList") {
-  //     console.log("123", item);
-  //     setCondition(1);
-  //     setSelectedValue(`${item.city_name} (${item.airport_code})`);
-  //     // setSearchTerm("");
-  //     // ArrivalCityList(item.city_code);
-  //     const data = await ArrivalCityList(item.airport_code);
-  //     console.log("data-->", data);
-
-  //     SectorList(item.city_code);
-  //     // setDepCityCode(item.city_code);
-  //     // setIsDropdownOpen(false);
-  //     // setDefaultMonth("");
-  //     setDefaultMonth2("");
-  //     // setSelectedDate(null);
-  //     setSelectedDate2(null);
-  //     setSelectedValue2("");
-  //     // setSearchFlightListData([]);
-  //     // setSearchFlightListDataCheap([]);
-  //     // setSelectedIndex(null);
-  //     // }
-
-  //     // Normalize `sortedCities` to match structure of `filteredSectors`
-  //     const mappedSortedCities = data.map((city) => ({
-  //       destination: city.city_name,
-  //       DestinationCode: city.city_code,
-  //     }));
-
-  //     // Combine both arrays
-  //     const combinedList = [...filteredSectors, ...mappedSortedCities];
-
-  //     const groupedTo = groupBy2(combinedList, "destination");
-
-  //     console.log("groupedTo", groupedTo);
-
-  //     var arr2 = [];
-  //     arr2.push(groupedTo);
-
-  //     const formattedGroupedCitiesTo = Object.entries(groupedTo).map(
-  //       ([cityName, cityArray]) => {
-  //         const item = cityArray[0]; // just take the first item per city
-  //         return {
-  //           value: item.DestinationCode,
-  //           label:
-  //             `${item.destination} ${item.DestinationCode} ${item.airport_name}`.trim(),
-  //           ...item,
-  //         };
-  //       }
-  //     );
-
-  //     console.log("formattedGroupedCitiesTo", formattedGroupedCitiesTo);
-
-  //     setSectorListTo(formattedGroupedCitiesTo);
-
-  //     // // Remove duplicates based on destination name
-  //     // const uniqueCombinedList = combinedList.filter(
-  //     //   (item, index, self) =>
-  //     //     index === self.findIndex((i) => i.destination === item.destination)
-  //     // );
-
-  //     // Set to state
-  //     // setSectorListTo(uniqueCombinedList);
-
-  //     // console.log("combinedList",combinedList);
-
-  //     // finally set 'from' value for react-select
-  //     setFrom(item);
-  //   }
-  // };
-
-  //   const handleSelect = async (item) => {
-  //   if (!item) {
-  //     setFrom(null);
-  //     return;
-  //   } else {
-  //     // if (item.source === "getSectorListNew") {
-  //     //   setCondition(0);
-  //     const selectedCity = item.city_name;
-  //     const airportCode = item.airport_code;
-
-  //     console.log("selectedCity", selectedCity);
-
-  //     setDepCityCode(airportCode ? airportCode : item.city_code);
-  //     setSelectedValue(`${selectedCity} (${airportCode})`);
-  //     setIsDropdownOpen(false);
-  //     setSelectedValue2("");
-  //     setTo("");
-  //     setSearchTerm("");
-  //     setSearchTerm2("");
-  //     setSelectedDate(null);
-  //     setDate1("");
-  //     setSearchFlightListData([]);
-  //     setSearchFlightListDataCheap([]);
-  //     setDefaultMonth("");
-  //     setSelectedIndex(null);
-
-  //     console.log("getSectorListNew", getSectorListNew);
-
-  //     // const filteredSectors = getSectorListNew
-  //     //   .filter((sector) => sector.Sector.startsWith(selectedCity + " //"))
-  //     //   .map((sector) => ({
-  //     //     destination: sector.Sector.split(" // ")[1].trim(),
-  //     //     DestinationCode: sector.Destination,
-  //     //   }))
-  //     //   .sort((a, b) => a.destination.localeCompare(b.destination));
-
-  //     // setSectorListTo(filteredSectors);
-  //     // console.log("filteredSectors", filteredSectors);
-
-  //     const filteredSectors = getSectorListNew
-  //       .filter((sector) => {
-  //         const [originCity] = sector.Sector.split(" // ");
-  //         return originCity.trim() === selectedCity;
-  //       })
-  //       .map((sector) => ({
-  //         city_name: sector.Sector.split(" // ")[1].trim(),
-  //         city_code: sector.Destination,
-  //         airport_code:airportCode,
-  //         airport_name:"",
-  //       }))
-  //       .sort((a, b) => a.city_name.localeCompare(b.city_name));
-
-  //     console.log("Filtered Sectors", filteredSectors);
-  //     setSectorListTo(filteredSectors);
-
-  //     // } else if (item.source === "getDepatureCityList") {
-  //     console.log("123", item);
-  //     setCondition(1);
-  //     setSelectedValue(`${item.city_name} (${item.airport_code})`);
-  //     // setSearchTerm("");
-  //     // ArrivalCityList(item.city_code);
-  //     const data = await ArrivalCityList(item.airport_code);
-  //     console.log("data-->", data);
-
-  //     SectorList(item.city_code);
-  //     // setDepCityCode(item.city_code);
-  //     // setIsDropdownOpen(false);
-  //     // setDefaultMonth("");
-  //     setDefaultMonth2("");
-  //     // setSelectedDate(null);
-  //     setSelectedDate2(null);
-  //     setSelectedValue2("");
-  //     // setSearchFlightListData([]);
-  //     // setSearchFlightListDataCheap([]);
-  //     // setSelectedIndex(null);
-  //     // }
-
-  //     // Normalize `sortedCities` to match structure of `filteredSectors`
-  //     const mappedSortedCities = data.map((city) => ({
-  //       city_name: city.city_name,
-  //       city_code: city.city_code,
-  //       airport_code:airportCode,
-  //       airport_name:"",
-  //     }));
-
-  //     // Combine both arrays
-  //     const combinedList = [...filteredSectors, ...mappedSortedCities];
-
-  //     const groupedTo = groupBy2(combinedList, "city_name");
-
-  //     console.log("groupedTo", groupedTo);
-
-  //     var arr2 = [];
-  //     arr2.push(groupedTo);
-
-  //     const formattedGroupedCitiesTo = Object.entries(groupedTo).map(
-  //       ([cityName, cityArray]) => {
-  //         const item = cityArray[0]; // just take the first item per city
-  //         return {
-  //           value: item.city_code,
-  //           label:
-  //             `${item.destination} ${item.city_code} ${item.airport_name}`.trim(),
-  //           ...item,
-  //         };
-  //       }
-  //     );
-
-  //     console.log("formattedGroupedCitiesTo", formattedGroupedCitiesTo);
-
-  //     setSectorListTo(formattedGroupedCitiesTo);
-
-  //     // // Remove duplicates based on destination name
-  //     // const uniqueCombinedList = combinedList.filter(
-  //     //   (item, index, self) =>
-  //     //     index === self.findIndex((i) => i.destination === item.destination)
-  //     // );
-
-  //     // Set to state
-  //     // setSectorListTo(uniqueCombinedList);
-
-  //     // console.log("combinedList",combinedList);
-
-  //     // finally set 'from' value for react-select
-  //     setFrom(item);
-  //   }
-  // };
-
   const handleSelect = async (item, skipToReset = false) => {
-    console.log('parth-1', JSON.stringify(item, null, 2));
+    console.log("parth-1", JSON.stringify(item, null, 2));
 
     if (!item) {
       setFrom(null);
       return;
     }
-
-    // if (from?.city_code === item.city_code) return;
 
     const selectedCity = item.city_name;
     const airportCode = item.airport_code ?? item.city_code;
@@ -752,7 +446,7 @@ const HomeHero = () => {
 
     // if (!skipToReset) {
 
-    setSelectedValue2("");   // only reset "To" if not skipping
+    setSelectedValue2("");
     setTo(null);
     setSearchTerm2("");
     setSelectedDate(null);
@@ -779,17 +473,13 @@ const HomeHero = () => {
     setSectorListTo(filteredSectors);
     setCondition(1);
 
-
-
     const arrivalData = await ArrivalCityList(airportCode);
     SectorList(item.city_code);
     setDefaultMonth2("");
     setSelectedDate2(null);
     // if (!skipToReset) {
-    setSelectedValue2("");  // again, only clear this if not skipping
+    setSelectedValue2(""); // again, only clear this if not skipping
     // }
-
-
 
     const mappedSortedCities = arrivalData?.map((city) => ({
       city_name: city.city_name,
@@ -798,13 +488,13 @@ const HomeHero = () => {
       airport_name: "",
     }));
 
-    let combinedList = selected === 1
-      ? [...mappedSortedCities]
-      : [...filteredSectors, ...mappedSortedCities];
+    let combinedList =
+      selected === 1
+        ? [...mappedSortedCities]
+        : [...filteredSectors, ...mappedSortedCities];
 
     // const combinedList = [...filteredSectors, ...mappedSortedCities];
     console.log("combinedList", combinedList);
-
 
     const groupedTo = groupBy2(combinedList, "city_name");
 
@@ -813,7 +503,8 @@ const HomeHero = () => {
         const item = cityArray[0];
         return {
           value: item.city_code,
-          label: `${item.city_name} ${item.city_code} ${item.airport_name}`.trim(),
+          label:
+            `${item.city_name} ${item.city_code} ${item.airport_name}`.trim(),
           ...item,
         };
       }
@@ -821,8 +512,6 @@ const HomeHero = () => {
     setFrom(item);
     setSectorListTo(formattedGroupedCitiesTo);
   };
-
-
 
   const groupBy2 = (array, key) => {
     return array.reduce((result, currentItem) => {
@@ -834,47 +523,6 @@ const HomeHero = () => {
       return result;
     }, {});
   };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        dropdownRef2.current &&
-        !dropdownRef2.current.contains(event.target)
-      ) {
-        setIsDropdownOpen2(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  useEffect(() => {
-    var islogin = localStorage.getItem("is_login");
-    SetLogin(islogin);
-
-    var role = localStorage.getItem("is_role");
-    if (islogin) {
-      setUserRole(JSON.parse(role));
-    }
-
-    GetRecentSearch();
-  }, []);
 
   const handleCounterChange = (type, change) => {
     // setSearchFlightList([]);
@@ -906,94 +554,17 @@ const HomeHero = () => {
     setIsDropdownOpenTravellers((prev) => !prev);
   };
 
-  const handleSearch = (e) => {
-    const textData = e.target.value.toUpperCase();
-    setSearchTerm(e.target.value);
-
-    if (textData === "") {
-      setMergedData(mergedData);
-      return;
-    }
-
-    const newData = mergedData.filter((item) => {
-      if (!item || !item.city_name) return false;
-      return item.city_name.toUpperCase().includes(textData);
-    });
-
-    setFilteredFromData(newData);
-  };
-
-  const handleSearch2 = (e) => {
-    const textData = e.target.value.toUpperCase();
-
-    setSearchTerm2(e.target.value); // Update search term state
-
-    if (textData === "") {
-      // If input is cleared, restore the original list
-      setSectorListTo(getSectorListTo);
-      return;
-    }
-
-    const newData = getSectorListTo.filter((item) => {
-      // console.log("ZEEL", item);
-
-      if (!item || !item.destination) return false;
-
-      // Extract city before "//" and check if it includes search input
-      return item.destination.toUpperCase().includes(textData);
-    });
-
-    setFilteredToData(newData); // Update the filtered list
-  };
-
-  // const handleSelect2 = (item) => {
-  //   if (!item) {
-  //     setTo(null);
-  //     return;
-  //   } else {
-  //     setDate1("");
-  //     setSelectedDate(null);
-  //     setDefaultMonth(null);
-
-  //     // if (getCondition === 0) {
-  //     // setSelectedValue2(`${item.destination} (${item.DestinationCode})`);
-  //     setSelectedValue2(item.city_name);
-  //     setSearchTerm2("");
-  //     setArrCityCode(item.city_code);
-  //     setIsDropdownOpen2(false);
-  //     getOnwardDate(item.city_code);
-  //     if (userRole === "2") {
-  //       dateAvailability(item.city_code);
-  //     } else if (userRole === "3") {
-  //       dateAvailabilitySupplier(item.city_code);
-  //     }
-  //     // } else if (getCondition === 1) {
-  //     // setSelectedValue2(`${item.city_name} (${item.airport_code})`);
-  //     setSearchTerm2("");
-  //     ArrivalCityList(getDepCityCode);
-  //     setArrCityCode(item.city_code);
-
-  //     setIsDropdownOpen2(false);
-  //     // }
-
-  //     setTo(item); // set the selected option in state      
-  //   }
-  // };
-
-
   const handleSelect2 = (item) => {
-    console.log('parth-2', JSON.stringify(item, null, 2));
+    console.log("parth-2", JSON.stringify(item, null, 2));
     setrecentswap(0);
     if (!item) {
       setTo(null);
       return;
     }
 
-    // Avoid unnecessary resets if selecting the same city
     if (to?.city_code === item.city_code) return;
 
-    setTo(item); // Set early
-
+    setTo(item);
     setDate1("");
     setSelectedDate(null);
     setDefaultMonth(null);
@@ -1007,26 +578,16 @@ const HomeHero = () => {
     if (userRole === "2") {
       // dateAvailability(item.city_code);
       dateAvailability(from?.city_code || getDepCityCode, item.city_code);
-
     } else if (userRole === "3") {
       dateAvailabilitySupplier(item.city_code);
     }
 
-    // ArrivalCityList(getDepCityCode); // to refresh options possibly
-    ArrivalCityList(from?.city_code || getDepCityCode); // use updated 'from' directly if available
-
+    ArrivalCityList(from?.city_code || getDepCityCode);
   };
 
-
   const onChange = (date, dateString) => {
-    console.log("dateString", dateString);
-    console.log("date", date);
-
     const momentDate = moment(dateString, "ddd D/M");
     const formattedDate = momentDate.format("YYYY-MM-DD");
-    // const formattedDate = moment(date).format("YYYY-MM-DD");
-
-    console.log("formattedDateString", formattedDate);
 
     setDate1(formattedDate); // Store formatted date in state
     setSelectedDate(date);
@@ -1041,10 +602,6 @@ const HomeHero = () => {
     const formattedDate = moment(dateString, "DD-MM-YYYY").format("YYYY-MM-DD");
     setDate2(formattedDate);
     setSelectedDate2(date);
-  };
-
-  const disablePastDates = (current) => {
-    return current && current < new Date().setHours(0, 0, 0, 0); // Disable dates before today
   };
 
   useEffect(() => {
@@ -1071,8 +628,6 @@ const HomeHero = () => {
 
       // console.log("futureDates",futureDates);
 
-
-
       const defaultmonth = futureDates[0];
 
       setDefaultMonth(defaultmonth);
@@ -1097,20 +652,9 @@ const HomeHero = () => {
     );
 
     const allDates = [...onwardDates, ...formattedAvailableDates];
-    // const formattedDate = current.format("YYYY-MM-DD");
-    // const onwardDates = (onewdatetest || []).map(item => item?.onward_date);
-
-    // const formattedAvailableDates = (Availdatetest || []).map(item => item
-    // );
-
-    // const allDates = [...onwardDates, ...formattedAvailableDates];
-
-    // console.log('allDates-->', allDates);
 
     return !allDates.includes(formattedDate);
   };
-
-  // console.log("RecentSelection", RecentSelection);
 
   const disableDates = (current) => {
     const returndate = getReturnDateList.map(
@@ -1222,7 +766,8 @@ const HomeHero = () => {
     const token = JSON.parse(localStorage.getItem("is_token_airiq"));
     setdepcitylistload(true);
     try {
-      const response = await axios.get(sectorscurl,
+      const response = await axios.get(
+        sectorscurl,
         // proxy + "https://omairiq.azurewebsites.net/sectors",
         {
           headers: {
@@ -1285,9 +830,6 @@ const HomeHero = () => {
       });
 
       const grouped = groupBy(merged, "city_name");
-
-      // console.log("grouped",grouped);
-
       var arr = [];
       arr.push(grouped);
 
@@ -1303,10 +845,6 @@ const HomeHero = () => {
         }
       );
 
-      console.log(
-        "formattedGroupedCities",
-        JSON.stringify(formattedGroupedCities, null, 2)
-      );
       setMergedData(formattedGroupedCities);
       console.log("formattedGroupedCities123", formattedGroupedCities);
     } else {
@@ -1336,11 +874,6 @@ const HomeHero = () => {
             ...item,
           };
         }
-      );
-
-      console.log(
-        "formattedGroupedCities",
-        JSON.stringify(formattedGroupedCities, null, 2)
       );
       setMergedData(formattedGroupedCities);
     }
@@ -1455,9 +988,6 @@ const HomeHero = () => {
   };
 
   const getOnwardDate = async (dep_city_code, citycode) => {
-
-
-
     const token = "4-2-3721-KRAZY-389-xnewkncBUI8";
     const publicIP = await getPublicIP();
 
@@ -1573,14 +1103,16 @@ const HomeHero = () => {
     setSearchCondition(false);
     setSearchFlightListDataCheap([]);
     // setSearchFlightListData([]);
-    // const originCode = 
+    // const originCode =
     // recentItem ? recentItem.departure_city_code : from?.city_code;
     const originCode = recentItem
       ? recentItem.departure_city_code
       : !from?.airport_code
-        ? from?.city_code
-        : from?.airport_code;
-    const destinationCode = recentItem ? recentItem.arrival_city_code : to?.city_code;
+      ? from?.city_code
+      : from?.airport_code;
+    const destinationCode = recentItem
+      ? recentItem.arrival_city_code
+      : to?.city_code;
     const formattedDate = moment(date1, "DD-MM-YYYY").format("YYYY-MM-DD");
     console.log("originCode", originCode);
 
@@ -1645,13 +1177,13 @@ const HomeHero = () => {
           onward_date: recentItem
             ? recentItem.departure_date
             : formattedDate == "Invalid date"
-              ? defaultMonth._i
-              : date1,
+            ? defaultMonth._i
+            : date1,
           return_date: recentItem
             ? recentItem.return_departure_date
             : formateddate == "Invalid date"
-              ? defaultMonth2._i
-              : formateddate,
+            ? defaultMonth2._i
+            : formateddate,
           adult: recentItem
             ? Number(recentItem.adult_travelers)
             : travellers?.adult,
@@ -1753,7 +1285,6 @@ const HomeHero = () => {
 
         // console.log("defaultMonth._i__",defaultMonth._i);
 
-
         const payload = {
           trip_type: selected,
           end_user_ip: "183.83.43.117",
@@ -1769,13 +1300,13 @@ const HomeHero = () => {
           onward_date: recentItem
             ? recentItem.departure_date
             : formattedDate == "Invalid date"
-              ? defaultMonth._i
-              : date1,
+            ? defaultMonth._i
+            : date1,
           return_date: recentItem
             ? recentItem.return_departure_date
             : formateddate == "Invalid date"
-              ? defaultMonth2._i
-              : formateddate,
+            ? defaultMonth2._i
+            : formateddate,
           adult: recentItem
             ? Number(recentItem.adult_travelers)
             : travellers?.adult,
@@ -1977,8 +1508,8 @@ const HomeHero = () => {
     console.log("Clicked item:", item);
     if (recentswap == 0) {
       setrecentswap(1);
-    } else { }
-
+    } else {
+    }
 
     // Step 1: Create From Option manually
     const fromOption = {
@@ -2036,7 +1567,6 @@ const HomeHero = () => {
 
     console.log("getDepCityCode", originCode);
 
-
     const payload = {
       // origin: getDepCityCode,
       origin: originCode,
@@ -2044,14 +1574,15 @@ const HomeHero = () => {
     };
 
     try {
-      const response = await fetch(availabilitycurl,
+      const response = await fetch(
+        availabilitycurl,
 
         {
           method: "POST",
           headers: headers,
           Authorization: token,
           body: JSON.stringify(payload),
-          redirect: "follow"
+          redirect: "follow",
         }
       );
 
@@ -2103,7 +1634,8 @@ const HomeHero = () => {
     };
 
     try {
-      const response = await fetch(supplieravailabilitycurl,
+      const response = await fetch(
+        supplieravailabilitycurl,
         // proxy + "https://omairiq.azurewebsites.net/supplieravailability",
 
         // {
@@ -2122,9 +1654,8 @@ const HomeHero = () => {
           headers: headers,
           Authorization: token,
           body: JSON.stringify(payload),
-          redirect: "follow"
+          redirect: "follow",
         }
-
       );
 
       const data = await response.json();
@@ -2169,10 +1700,12 @@ const HomeHero = () => {
     const originCode = recentItem
       ? recentItem.departure_city_code
       : !from?.airport_code
-        ? from?.city_code
-        : from?.airport_code;
+      ? from?.city_code
+      : from?.airport_code;
 
-    const destinationCode = recentItem ? recentItem.arrival_city_code : to?.city_code;
+    const destinationCode = recentItem
+      ? recentItem.arrival_city_code
+      : to?.city_code;
     console.log("originCode", originCode);
 
     const token = JSON.parse(localStorage.getItem("is_token_airiq"));
@@ -2208,11 +1741,6 @@ const HomeHero = () => {
         selected == 0
           ? formattedDate
           : moment(formattedDate, "YYYY-MM-DD").format("YYYY/MM/DD");
-
-      console.log("formattedDate", formattedDate);
-      console.log("date1", date1);
-      console.log("DEPARTURE DATE", departureDate);
-      // console.log("Seleceted", selected);
 
       const payload = {
         // origin: recentItem ? recentItem.departure_city_code : getDepCityCode,
@@ -2255,57 +1783,12 @@ const HomeHero = () => {
             headers: headers,
             Authorization: token,
             body: JSON.stringify(payload),
-            redirect: "follow"
-          },
-
-
+            redirect: "follow",
+          }
         );
 
         // Parse the JSON response
         const data = await response.json();
-
-        // if (data.status === "success") {
-        //   console.log("Response Search Data from API airiq:", data.data);
-        //   const prices = data?.data
-        //     ?.map((item) =>
-        //        item?.price
-        //     )
-        //     .filter((price) => price !== undefined && price !== null);
-
-        //   const minPrice = Math.min(...prices);
-
-        //   setSearchFlightListData(data.data);
-        //   setbookingtokenid(data.booking_token_id);
-        //   setSearchFlightListDatamsg(data.message);
-        //   setSearchFlightListLoading(false);
-        //   if (!isRecentClick) {
-        //     RecentSearch2(
-        //       selectedValue,
-        //       selectedValue2,
-        //       travellers?.adult,
-        //       travellers?.child,
-        //       travellers?.infant,
-        //       totalTravellers,
-        //       departureDate ? departureDate : selectedIndex.departure_date,
-        //       getDepCityCode
-        //         ? getDepCityCode
-        //         : selectedIndex.departure_city_code,
-        //       getArrCityCode ? getArrCityCode : selectedIndex.arrival_city_code,
-        //       getCondition,
-        //       minPrice
-        //     );
-        //   }
-        // } else if (data.status === "success" && data.message === "Data not found") {
-        // setSearchCondition2(true);
-        // }
-        // else {
-        //   setSearchFlightListLoading(false);
-        //   Notification(
-        //     "error",
-        //     "Error!",
-        //     data.message || "Something went wrong"
-        //   );
-        // }
 
         if (data.status === "success" && data.message === "Data not found") {
           setSearchCondition2(true);
@@ -2319,7 +1802,6 @@ const HomeHero = () => {
             .filter((price) => price !== undefined && price !== null);
 
           const minPrice = Math.min(...prices);
-
 
           setSearchFlightListData(data.data);
           setbookingtokenid(data.booking_token_id);
@@ -2430,22 +1912,6 @@ const HomeHero = () => {
       });
   };
 
-  // const formattedCities = mergedData.map((item) => (
-
-  //   {
-
-  //   value: item.city_code,
-  //   label: `${item.city_name} ${item.airport_code} ${item.airport_name}`.trim(),
-  //   ...item,
-  // }));
-
-  //   const uniqueCities = formattedCities.filter(
-  //   (city, index, self) =>
-  //     index === self.findIndex((c) => c.city_name === city.city_name)
-  // );
-
-  // console.log("formattedCities",uniqueCities);
-
   const formattedCitiesTo = getSectorListTo.map((item) => {
     if (getCondition === 0) {
       return {
@@ -2474,6 +1940,79 @@ const HomeHero = () => {
   const controls1 = useAnimation();
   const controls2 = useAnimation();
 
+  const BUSGetCompanyList = async () => {
+    try {
+      const response = await axios.post(
+        getcompanylist,
+        {
+          verifyCall: "ITS_UAT_74396040927B60436124249057b187C5erBNMLQo33ec3",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
+
+      console.log("Company List:", response.data.data.ITSCompanyList);
+      localStorage.setItem(
+        "CompanyID",
+        response.data.data.ITSCompanyList[0]?.companyID
+      );
+    } catch (error) {
+      console.error("API error:", error);
+    }
+  };
+
+  const [cancellationPolicy, setCancellationPolicy] = useState([]);
+  const BusGetCancellationPolicy = async () => {
+    const formdata = new FormData();
+    formdata.append(
+      "verifyCall",
+      "ITS_UAT_74396040927B60436124249057b187C5erBNMLQo33ec3"
+    );
+    formdata.append("companyID", 1);
+    try {
+      const res = axios.post(getcancellationpolicy, formdata, {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "*/*",
+        },
+      });
+      console.log("poli see ", res.date.data);
+    } catch (error) {
+      console.log("kaik error aave he ", error);
+    }
+  };
+
+  const {
+    GetSources,
+    GetDestination,
+    destination_data,
+    source_data,
+    GetRoutes,
+    route_data,
+  } = useBusContext();
+
+  const handleSelectBus = async (item) => {
+    setFrom(item?.CityName);
+    // GetDestination(item.cityId);
+  };
+
+  const [activeTabIndex, setActiveTabIndex] = useState(null);
+  const [activeTabName, setActiveTabName] = useState("");
+
+  const toggleTab = (index, tab) => {
+    if (activeTabIndex === index && activeTabName === tab) {
+      setActiveTabIndex(null);
+      setActiveTabName("");
+    } else {
+      setActiveTabIndex(index);
+      setActiveTabName(tab);
+    }
+  };
+
   useEffect(() => {
     controls1.start({
       y: 0,
@@ -2496,57 +2035,49 @@ const HomeHero = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef2.current &&
+        !dropdownRef2.current.contains(event.target)
+      ) {
+        setIsDropdownOpen2(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    var islogin = localStorage.getItem("is_login");
+    SetLogin(islogin);
+
+    var role = localStorage.getItem("is_role");
+    if (islogin) {
+      setUserRole(JSON.parse(role));
+    }
+    // BUSGetCompanyList();
+    // GetSources();
+    GetRecentSearch();
+  }, []);
+
   return (
-    // <>
-    //  <section className="containerr container">
-    //   <div className="vector-image d-block d-md-none d-xxl-block">
-    //     <svg xmlns viewBox="0 0 1414 319" fill="none">
-    //       <path
-    //         className="path"
-    //         d="M-0.5 215C62.4302 220.095 287 228 373 143.5C444.974 72.7818 368.5 -3.73136 320.5 1.99997C269.5 8.08952 231.721 43.5 253.5 119C275.279 194.5 367 248.212 541.5 207.325C675.76 175.867 795.5 82.7122 913 76.7122C967.429 73.9328 1072.05 88.6813 1085 207.325C1100 344.712 882 340.212 922.5 207.325C964.415 69.7967 1354 151.5 1479 183.5"
-    //         stroke="#ECECF2"
-    //         stroke-width="4"
-    //         stroke-linecap="round"
-    //         stroke-dasharray="round"
-    //       ></path>
-    //       <path
-    //         className="dashed"
-    //         d="M-0.5 215C62.4302 220.095 287 228 373 143.5C444.974 72.7818 368.5 -3.73136 320.5 1.99997C269.5 8.08952 231.721 43.5 253.5 119C275.279 194.5 367 248.212 541.5 207.325C675.76 175.867 795.5 82.7122 913 76.7122C967.429 73.9328 1072.05 88.6813 1085 207.325C1100 344.712 882 340.212 922.5 207.325C964.415 69.7967 1354 151.5 1479 183.5"
-    //         stroke="#212627"
-    //         stroke-width="4"
-    //         stroke-linecap="round"
-    //         stroke-dasharray="22 22"
-    //       ></path>
-    //     </svg>
-    //   </div>
-    //   <div className="row gap-4 gap-lg-0 align-items-center justify-content-center">
-    //     <div className="col-12 col-lg-5 leftside">
-    //       <div className="content-block">
-    //         <h1 className="heroleftsidetext">
-    //           <span>Book</span> Your Dream <span>Flights</span> Now!
-    //         </h1>
-    //         <p className="mt-3 col-lg-10">
-    //           Book your dream flights now and turn your travel aspirations into
-    //           reality! Whether you're planning a relaxing getaway, an
-    //           adventurous trip, or a visit to loved ones, we have the perfect
-    //           options tailored just for you.
-    //         </p>
-
-    //         <button
-    //           className="herobookbtn"
-    //           onClick={() => handleScroll("#bookingcont")}
-    //         >
-    //           BOOK NOW
-    //         </button>
-    //       </div>
-    //     </div>
-    //     <div className="col-12 col-md-7 imgsec">
-    //       <img src={images.Plane} className="planeimg" alt="Aeroplane image" />
-    //     </div>
-    //   </div>
-    // </section>
-    // </>
-
     <section className="containerr container-fluid">
       <div className="E9x1-card">
         <div className="E9width60">
@@ -2564,8 +2095,9 @@ const HomeHero = () => {
                   onClick={() => setSelectedtab(tab.key)}
                 >
                   <div
-                    className={`tab-icon-box ${selectedtab === tab.key ? "active" : ""
-                      }`}
+                    className={`tab-icon-box ${
+                      selectedtab === tab.key ? "active" : ""
+                    }`}
                   >
                     {tab.icon}
                   </div>
@@ -2573,44 +2105,52 @@ const HomeHero = () => {
                 </div>
               ))}
             </div>
-            <div className="J_T2">
-              <div className="J_T2-header">
-                <div
-                  className="dropdown-wrapper"
-                  onClick={() => setIsOpen(!isOpen)}
-                >
-                  <span>{selectedOption}</span>
-                  <span className="arrow">
-                    <FaChevronDown />
-                  </span>{" "}
-                </div>
-                {isOpen && (
-                  <div className="dropdown-options">
-                    {options.map((opt) => (
-                      <div
-                        key={opt}
-                        className={`dropdown-option ${opt === selectedOption ? "active" : ""
-                          } ${opt === "Multi-city" ? "disabled" : ""}`}
-                        onClick={() => handleSelecttripoption(opt)}
-                        style={
-                          opt === "Multi-city"
-                            ? { cursor: "not-allowed", opacity: 0.5 }
-                            : {}
-                        }
-                      >
-                        {opt}
-                      </div>
-                    ))}
+
+            {selectedtab === "buses" ? (
+              <></>
+            ) : (
+              <div className="J_T2">
+                <div className="J_T2-header">
+                  <div
+                    className="dropdown-wrapper"
+                    onClick={() => setIsOpen(!isOpen)}
+                  >
+                    <span>{selectedOption}</span>
+                    <span className="arrow">
+                      <FaChevronDown />
+                    </span>{" "}
                   </div>
-                )}
+                  {isOpen && (
+                    <div className="dropdown-options">
+                      {options.map((opt) => (
+                        <div
+                          key={opt}
+                          className={`dropdown-option ${
+                            opt === selectedOption ? "active" : ""
+                          } ${opt === "Multi-city" ? "disabled" : ""}`}
+                          onClick={() => handleSelecttripoption(opt)}
+                          style={
+                            opt === "Multi-city"
+                              ? { cursor: "not-allowed", opacity: 0.5 }
+                              : {}
+                          }
+                        >
+                          {opt}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
             <div className="flight-search-bar">
               <div className="from-section">
                 <Select
                   value={from}
-                  onChange={handleSelect}
-                  options={mergedData}
+                  onChange={
+                    selectedtab === "buses" ? handleSelectBus : handleSelect
+                  }
+                  options={selectedtab === "buses" ? statikDato : mergedData}
                   isLoading={depcitylistload}
                   styles={customStyles}
                   isClearable={true}
@@ -2620,17 +2160,22 @@ const HomeHero = () => {
                       // Dropdown open hoy tyare
                       return (
                         <div>
-                          <div>{data.city_name}</div>
-                          <div style={{ fontSize: "12px" }}>
-                            {data.airport_name}{" "}
-                            <span style={{ color: "#f45500" }}>
-                              ({data.airport_code})
-                            </span>
+                          <div>
+                            {data.city_name ? data.city_name : data.CityName}
                           </div>
+                          {selectedtab === "buses" ? (
+                            <> </>
+                          ) : (
+                            <div style={{ fontSize: "12px" }}>
+                              {data.airport_name}{" "}
+                              <span style={{ color: "#f45500" }}>
+                                ({data.airport_code})
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     } else {
-                      // Input field ma (select thaya pachi)
                       return (
                         <div>
                           {data.city_name}{" "}
@@ -2648,12 +2193,20 @@ const HomeHero = () => {
                 />
               </div>
 
-              <button disabled={recentswap == 1 ? true : false} className="swap-button" onClick={swapLocations}>
-                <FaExchangeAlt
-                  className={isSwapping ? "spin" : ""}
-                  color="#000"
-                />
-              </button>
+              {selectedtab === "buses" ? (
+                <></>
+              ) : (
+                <button
+                  disabled={recentswap == 1 ? true : false}
+                  className="swap-button"
+                  onClick={swapLocations}
+                >
+                  <FaExchangeAlt
+                    className={isSwapping ? "spin" : ""}
+                    color="#000"
+                  />
+                </button>
+              )}
 
               <div className="to-section">
                 <Select
@@ -2710,7 +2263,7 @@ const HomeHero = () => {
               <div className="custom-date-picker">
                 <DatePicker
                   onChange={onChange}
-                  placeholder="Departure"
+                  placeholder={selectedtab === "buses" ? "Date" : "Departure"}
                   format="ddd D/M"
                   disabledDate={disableAllExceptApiDates}
                   value={
@@ -2725,10 +2278,11 @@ const HomeHero = () => {
               {getCondition === 0 ||
                 (selected === 1 && (
                   <div
-                    className={`${selected === 0 && getCondition === 1
-                      ? "disabledatepicker"
-                      : "custom-date-picker"
-                      }`}
+                    className={`${
+                      selected === 0 && getCondition === 1
+                        ? "disabledatepicker"
+                        : "custom-date-picker"
+                    }`}
                   >
                     <DatePicker
                       disabled={selected == 0 ? true : false}
@@ -2847,8 +2401,9 @@ const HomeHero = () => {
                       {classes.map((classOption) => (
                         <div
                           key={classOption}
-                          className={`classselekt ${selectedClass === classOption ? "selected" : ""
-                            }`}
+                          className={`classselekt ${
+                            selectedClass === classOption ? "selected" : ""
+                          }`}
                           onClick={() => setSelectedClass(classOption)}
                         >
                           {classOption}
@@ -2891,50 +2446,8 @@ const HomeHero = () => {
                 Search
               </button>
             </div>
-            {/* <div className="AQWr-mod-margin-top-small voEJ-cmp2-direct-wrapper"></div> */}
-            {/* <div className="AQWr-mod-margin-top-small voEJ-cmp2-direct-wrapper"></div> */}
-            {/* <div className="AQWr-mod-margin-top-small voEJ-cmp2-direct-wrapper"></div> */}
           </div>
         </div>
-        {/* <div className="E9width40">
-          <div className="d-flex gap-4 chalisninicheno">
-            <div className="d-flex flex-column gap-4 zeel-1">
-              <img
-                src={images.flight1}
-                className="rounded-xl object-cover h-24 md:h-32"
-                style={{ width: "220px", height: "220px" }}
-              />
-              <img
-                src={images.flight2}
-                className="rounded-xl object-cover h-40 md:h-48"
-                style={{ width: "220px", height: "220px" }}
-              />
-              <img
-                src={images.flight3}
-                className="rounded-xl object-cover h-32 md:h-40"
-                style={{ width: "220px", height: "220px" }}
-              />
-            </div>
-
-            <div className="d-flex flex-column gap-4 zeel-2">
-              <img
-                src={images.flight4}
-                className="rounded-xl object-cover h-24 md:h-32"
-                style={{ width: "220px", height: "220px" }}
-              />
-              <img
-                src={images.flight5}
-                className="rounded-xl object-cover h-40 md:h-48"
-                style={{ width: "220px", height: "220px" }}
-              />
-              <img
-                src={images.flight6}
-                className="rounded-xl object-cover h-32 md:h-40"
-                style={{ width: "220px", height: "220px" }}
-              />
-            </div>
-          </div>
-        </div> */}
 
         <div ref={containerRef} className="E9width40">
           <div className="d-flex gap-4 chalisninicheno">
@@ -3013,85 +2526,60 @@ const HomeHero = () => {
             </>
           ) : (
             <>
-              {/* {getSearchFlightListData?.length > 0  || getSearchFlightListDataCheap > 0 ?  (
-              
+              {(getSearchFlightListData?.length > 0 ||
+                getSearchFlightListDataCheap?.length > 0) && (
                 <>
-                  <div className="flightcounter2">
+                  <div
+                    className="flightcounter2 resp_flight_search_result"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <h5 className="hero_ticket_book_resp_font_size2">
                       We have{" "}
-                      <span>{getSearchFlightListData?.length ? getSearchFlightListData?.length : getSearchFlightListDataCheap?.length} Flight</span> from{" "}
                       <span>
-                        {getSearchFlightListData[0]?.dep_city_name
-                          ? getSearchFlightListData[0]?.dep_city_name 
+                        {getSearchFlightListData?.length
+                          ? getSearchFlightListData.length
+                          : getSearchFlightListDataCheap.length}{" "}
+                        Flight
+                      </span>{" "}
+                      from{" "}
+                      <span>
+                        {getSearchFlightListDataCheap[0]?.dep_city_code
+                          ? getSearchFlightListDataCheap[0].dep_city_code
                           : getSearchFlightListData[0]?.origin}
                       </span>{" "}
-                      to {""}
+                      to{" "}
                       <span>
-                        {getSearchFlightListData[0]?.arr_city_name
-                          ? getSearchFlightListData[0]?.arr_city_name
+                        {getSearchFlightListDataCheap[0]?.arr_city_code
+                          ? getSearchFlightListDataCheap[0].arr_city_code
                           : getSearchFlightListData[0]?.destination}
                       </span>{" "}
                       {totalTravellers} Traveller
                     </h5>
+                    <Select
+                      className="resp_flight_filter"
+                      options={optionss}
+                      onChange={handleChanges}
+                      placeholder={
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <FaSort /> Flight Sort
+                        </div>
+                      }
+                      styles={customStyles2}
+                      isSearchable={false}
+                    />
                   </div>
                 </>
-              ) : (
-                <></>
-              )} */}
-
-              {(getSearchFlightListData?.length > 0 ||
-                getSearchFlightListDataCheap?.length > 0) && (
-                  <>
-                    <div
-                      className="flightcounter2 resp_flight_search_result"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <h5 className="hero_ticket_book_resp_font_size2">
-                        We have{" "}
-                        <span>
-                          {getSearchFlightListData?.length
-                            ? getSearchFlightListData.length
-                            : getSearchFlightListDataCheap.length}{" "}
-                          Flight
-                        </span>{" "}
-                        from{" "}
-                        <span>
-                          {getSearchFlightListDataCheap[0]?.dep_city_code
-                            ? getSearchFlightListDataCheap[0].dep_city_code
-                            : getSearchFlightListData[0]?.origin}
-                        </span>{" "}
-                        to{" "}
-                        <span>
-                          {getSearchFlightListDataCheap[0]?.arr_city_code
-                            ? getSearchFlightListDataCheap[0].arr_city_code
-                            : getSearchFlightListData[0]?.destination}
-                        </span>{" "}
-                        {totalTravellers} Traveller
-                      </h5>
-                      <Select className="resp_flight_filter"
-                        options={optionss}
-                        onChange={handleChanges}
-                        placeholder={
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                            }}
-                          >
-                            <FaSort /> Flight Sort
-                          </div>
-                        }
-                        styles={customStyles2}
-                        isSearchable={false}
-                      />
-                    </div>
-                  </>
-                )}
+              )}
 
               {/* {getSeachCondition === true ? (
                 <>
@@ -3100,7 +2588,6 @@ const HomeHero = () => {
               ) : ( */}
               <>
                 {getfiltercondation ? (
-
                   <>
                     {[...getfilerdata].map((item, index) => {
                       const calculateDuration = (departure, arrival) => {
@@ -3534,10 +3021,12 @@ const HomeHero = () => {
                               <div className="mobile_row">
                                 <div>
                                   {(() => {
-                                    {/* const airline =
+                                    {
+                                      /* const airline =
                                       getCondition === 1
                                         ? item.airline_name
-                                        : item.airline; */}
+                                        : item.airline; */
+                                    }
                                     const airline = item.airline;
 
                                     return airline === "IndiGo Airlines" ||
@@ -3745,7 +3234,6 @@ const HomeHero = () => {
                       );
                     })}
                   </>
-
                 ) : (
                   <>
                     {[...sortedFlights].map((item, index) => {
@@ -3774,10 +3262,12 @@ const HomeHero = () => {
                                             : item.airline; */
                                         }
                                         {
+                                          /* {
                                           console.log(
                                             "airline name",
                                             item.airline
                                           );
+                                        } */
                                         }
                                         return airline === "IndiGo Airlines" ||
                                           airline === "IndiGo" ? (
@@ -4185,10 +3675,12 @@ const HomeHero = () => {
                               <div className="mobile_row">
                                 <div>
                                   {(() => {
-                                    {/* const airline =
+                                    {
+                                      /* const airline =
                                       getCondition === 1
                                         ? item.airline_name
-                                        : item.airline; */}
+                                        : item.airline; */
+                                    }
                                     const airline = item.airline;
 
                                     return airline === "IndiGo Airlines" ||
@@ -4547,8 +4039,10 @@ const HomeHero = () => {
                                         ) : (
                                           <>
                                             {item?.duration &&
-                                              `${item.duration.split(":")[0]
-                                              }h ${item.duration.split(":")[1]
+                                              `${
+                                                item.duration.split(":")[0]
+                                              }h ${
+                                                item.duration.split(":")[1]
                                               }min`}
                                           </>
                                         )}
@@ -4807,10 +4301,12 @@ const HomeHero = () => {
                             <div className="mobile_row">
                               <div>
                                 {(() => {
-                                  {/* const airline =
+                                  {
+                                    /* const airline =
                                     getCondition === 1
                                       ? item.airline_name
-                                      : item.airline; */}
+                                      : item.airline; */
+                                  }
                                   const airline = item.airline;
 
                                   return airline === "IndiGo Airlines" ||
@@ -5020,15 +4516,166 @@ const HomeHero = () => {
               {/* )} */}
             </>
           )}
+          {selectedtab === "buses" && (
+            <>
+              <div className="bus-list">
+                {buses.map((bus, index) => (
+                  <div key={index} className="bus-card">
+                    <div className="d-flex justify-content-between">
+                      <div className="bus-card-left">
+                        <div
+                          className="bus-tag"
+                          style={{ backgroundColor: bus.tagColor }}
+                        >
+                          {bus.tag}
+                        </div>
+                        <div className="bus-title">{bus.title}</div>
+                        <div className="bus-type">{bus.BusTypeName}</div>
+                        <div className="bus-type">{bus.ArrangementName}</div>
+                      </div>
+                      <div className="bus-card-middle">
+                        <div className="bus-rating">
+                          <span className="rating-star">★ {bus.rating}</span>
+                          <span className="rating-count">{bus.reviews}</span>
+                        </div>
+                        <div className="bus-times">
+                          <span className="bus-time">{bus.CityTime}</span>
+                          <span className="bus-arrow">—</span>
+                          <span className="bus-time">{bus.ArrivalTime}</span>
+                        </div>
+                        <div className="bus-duration">
+                          {bus.duration} • {bus.EmptySeats}
+                        </div>
+                      </div>
+                      <div className="bus-card-right">
+                        <div className="bus-price">₹{bus.price}</div>
+                        <div className="onwards">Onwards</div>
+                      </div>
+                    </div>
+                    <div
+                      style={{ border: "1px solid #eee", marginTop: "1rem" }}
+                    />{" "}
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="bus-tabs-container">
+                        <div className="bus-tabs">
+                          {["Amenities", "Pickup & Drops", "Policies"].map(
+                            (tab) => (
+                              <button
+                                key={tab}
+                                className={`tab-btn ${
+                                  activeTabIndex === index &&
+                                  activeTabName === tab
+                                    ? "active"
+                                    : ""
+                                }`}
+                                onClick={() => toggleTab(index, tab)}
+                              >
+                                {tab} <GoChevronDown />
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </div>
+                      <Link to={"/SeatSelcetion"} className="view-seats">
+                        Select Seat
+                      </Link>
+                    </div>
+                    {activeTabIndex === index && (
+                      <div className="tab-content">
+                        {activeTabName === "Policies" && (
+                          <div
+                            className="accordion-body text-dark"
+                            style={{
+                              backgroundColor: "#fff9db",
+                              borderBottomLeftRadius: "0.75rem",
+                              borderBottomRightRadius: "0.75rem",
+                            }}
+                          >
+                            <ul className="mb-0 ps-3">
+                              <li>
+                                Cancellations made 4 to 12 hours before the
+                                journey will be eligible for a 25% refund.
+                              </li>
+                              <li>
+                                Cancellations made 12 to 24 hours before the
+                                journey will be eligible for a 50% refund.
+                              </li>
+                              <li>
+                                Partial refunds depend on the operator’s terms.
+                              </li>
+                              <li>
+                                GST and convenience fees are non-refundable.
+                              </li>
+                              <li>
+                                For full terms, please refer to our{" "}
+                                <a
+                                  href="#"
+                                  className="text-decoration-underline text-dark fw-bold"
+                                >
+                                  cancellation policy page
+                                </a>
+                                .
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                        {activeTabName === "Photos" && (
+                          <div>
+                            <h4>Bus Photos</h4>
+                            <p>[Image Placeholder]</p>
+                          </div>
+                        )}
+                        {activeTabName === "Amenities" && (
+                          <div>
+                            <h5 className="fw-bold">Amenities</h5>
+                            <p>WiFi, Charging Port, Blanket, Water Bottle</p>
+                          </div>
+                        )}
+                        {activeTabName === "Pickup & Drops" && (
+                          <div className="pickup-drop">
+                            <div className="pickupdiv">
+                              <h5 className="fw-bolder">Pickup Points</h5>
+                              <ul>
+                                <li>03:00 - Greenland Chokdi</li>
+                                <li>03:15 - Gondal Chowkdi</li>
+                              </ul>
+                            </div>
+                            <div className="dropdiv">
+                              <h5 className="fw-bolder">Drop Points</h5>
+                              <ul>
+                                <li>06:15 - Air Port, Porbandar</li>
+                                <li>06:20 - Narshan Tekri</li>
+                                <li>06:25 - Kamla Baug</li>
+                                <li>06:30 - M.G Road</li>
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+                        {activeTabName === "Reviews" && (
+                          <div>
+                            <h4>Customer Reviews</h4>
+                            <p>
+                              ⭐ 4.7 based on 9 reviews — "Very clean and on
+                              time!"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           {login == "true" ? (
             <>
               <div className="recent-searches-wrapper">
                 <h2 className="recent_search_head">Recent Searches</h2>
                 {RecentSelection.length > 0 &&
-                  RecentSelection.filter((item) =>
-                    selected == 1 ? item?.is_return == 1 : item?.is_return == 0
-                  ).length > 0 ? (
+                RecentSelection.filter((item) =>
+                  selected == 1 ? item?.is_return == 1 : item?.is_return == 0
+                ).length > 0 ? (
                   <Swiper
                     modules={[Navigation]}
                     navigation

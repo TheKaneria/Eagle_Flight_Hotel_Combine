@@ -11,7 +11,11 @@ import { IoCloseCircle } from "react-icons/io5";
 import { FaInfoCircle } from "react-icons/fa";
 import axios from "axios";
 import moment from "moment";
-import { ACCEPT_HEADER, supplierticketcurl, ticketcurl } from "../../Utils/Constant";
+import {
+  ACCEPT_HEADER,
+  supplierticketcurl,
+  ticketcurl,
+} from "../../Utils/Constant";
 
 const HomePage = () => {
   const [modalWidth, setModalWidth] = useState("90%");
@@ -54,20 +58,17 @@ const HomePage = () => {
   const [login, SetLogin] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
-    const [userRole, setUserRole] = useState("");
+  const [userRole, setUserRole] = useState("");
 
+  useEffect(() => {
+    var islogin = localStorage.getItem("is_login");
+    SetLogin(islogin);
 
-      useEffect(() => {
-        var islogin = localStorage.getItem("is_login");
-        SetLogin(islogin);
-    
-        var role = localStorage.getItem("is_role");
-        if (islogin) {
-          setUserRole(JSON.parse(role));
-        }
-    
-      }, []);
-        
+    var role = localStorage.getItem("is_role");
+    if (islogin) {
+      setUserRole(JSON.parse(role));
+    }
+  }, []);
 
   const API_KEY =
     "NTMzNDUwMDpBSVJJUSBURVNUIEFQSToxODkxOTMwMDM1OTk2OmpTMm0vUU1HVmQvelovZi81dFdwTEE9PQ==";
@@ -84,9 +85,9 @@ const HomePage = () => {
     if (bookingid !== null) {
       setModalOpen(true);
       // BookingDetails(bookingid);
-          setTimeout(() => {
-      BookingDetails(bookingid);
-    }, 1000);
+      setTimeout(() => {
+        BookingDetails(bookingid);
+      }, 1000);
     }
 
     const token = JSON.parse(localStorage.getItem("is_token"));
@@ -95,31 +96,29 @@ const HomePage = () => {
   }, [userRole]);
 
   const BookingDetails = async (bookingid) => {
-
-    console.log("111111111111111111111111111111111111");
-    
     const token = JSON.parse(localStorage.getItem("is_token_airiq"));
     setLoading(true);
     let apiUrl = "";
-    
-          if (userRole === "2") {
-            // apiUrl = proxy + "https://omairiq.azurewebsites.net/search";
-            apiUrl = `${ticketcurl}/${bookingid}`;
-          } else if (userRole === "3") {
-            // apiUrl = proxy + "https://omairiq.azurewebsites.net/suppliersearch";
-            apiUrl = `${supplierticketcurl}/${bookingid}`;
-          } else {
-            console.error("Invalid selection value");
-            return;
-          }
+
+    if (userRole === "2") {
+      // apiUrl = proxy + "https://omairiq.azurewebsites.net/search";
+      apiUrl = `${ticketcurl}/${bookingid}`;
+    } else if (userRole === "3") {
+      // apiUrl = proxy + "https://omairiq.azurewebsites.net/suppliersearch";
+      apiUrl = `${supplierticketcurl}/${bookingid}`;
+    } else {
+      console.error("Invalid selection value");
+      return;
+    }
     try {
       console.log("2222222222222222222");
-      
+
       // const res = await axios.get(`${ticketcurl}/${bookingid}`,
-      const res = await axios.get(apiUrl,
+      const res = await axios.get(
+        apiUrl,
         // proxy +
         //   `https://omairiq.azurewebsites.net/ticket?booking_id=${bookingid}`,
-        
+
         {
           headers: {
             // "api-key": API_KEY,
@@ -204,7 +203,7 @@ const HomePage = () => {
                   <tr>
                     {/* <th className="text-white">S.No</th> */}
                     <th className="text-black">Airline</th>
-                    <th className="text-black" >Booking Date</th>
+                    <th className="text-black">Booking Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,7 +267,11 @@ const HomePage = () => {
                     <>
                       <thead>
                         <tr>
-                          <th colSpan={4} className="text-black" style={{textAlign:"left"}}>
+                          <th
+                            colSpan={4}
+                            className="text-black"
+                            style={{ textAlign: "left" }}
+                          >
                             Adult (12+ Years)
                           </th>
                         </tr>

@@ -11,7 +11,6 @@
 // };
 // export default createNotification;
 
-import React from "react";
 import { notification } from "antd";
 
 const createNotification = (type, message, description, duration = 3) => {

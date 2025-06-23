@@ -366,3 +366,218 @@
   color: white !important;
   border-radius: 50%;
 }
+
+
+
+/* Add New Flight Details Page CSS */
+
+.flight-card {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 16px;
+  font-family: Arial, sans-serif;
+  max-width: 900px;
+  margin: 20px auto;
+  background: #fff;
+}
+
+.flight-header {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.flight-header h2 {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.flight-header p {
+  margin: 2px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.right-header {
+  text-align: right;
+}
+
+.badge {
+  font-size: 10px;
+  background: #2dc799;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.right-header a {
+  display: block;
+  font-size: 12px;
+  color: #007bff;
+  text-decoration: none;
+}
+
+.flight-info {
+  margin-top: 12px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 12px;
+  background: #f9f9f9;
+}
+
+.airline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.airline img {
+  height: 20px;
+}
+
+.chip {
+  background: #e0e0e0;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.timings {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.timings p {
+  margin: 2px 0;
+  font-size: 13px;
+}
+
+.duration {
+  color: #777;
+  margin: 6px 0;
+}
+
+.icons span {
+  font-size: 20px;
+  margin-left: 8px;
+  cursor: default;
+}
+
+.baggage-info {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.extra-baggage {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  margin-top: 12px;
+  color: #007bff;
+}
+
+.extra-baggage a {
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.policy {
+  border-top: 1px solid #eee;
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.policy-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.policy-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.policy-header a {
+  color: #007bff;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.policy-details {
+  margin-top: 10px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.route {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.route img {
+  height: 14px;
+}
+
+.charges {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.bar {
+  flex-grow: 1;
+  height: 6px;
+  background: #ccc;
+  margin: 0 12px;
+  position: relative;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.green-bar {
+  position: absolute;
+  left: 0;
+  height: 100%;
+  width: 85%;
+  background: #30b26b;
+}
+
+.red-bar {
+  position: absolute;
+  right: 0;
+  height: 100%;
+  width: 15%;
+  background: #d9534f;
+}
+
+.timeline {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+/*  */
+
+.sing_date_time_header{
+
+}
+
+.flight_header_inner{
+  display: flex;
+  flex-direction: column;
+  align-items: baseline;
+}

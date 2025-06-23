@@ -18,7 +18,6 @@ import { MdAirplaneTicket } from "react-icons/md";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import axios from "axios";
-import { BsCalendarDate } from "react-icons/bs";
 import { IoLogoWhatsapp } from "react-icons/io";
 import { SiGmail } from "react-icons/si";
 import { ACCEPT_HEADER, ticketcurl } from "../../Utils/Constant";
@@ -108,7 +107,6 @@ const ViewBooking = () => {
     pdf.save("Ticket.pdf");
   };
 
-
   console.log("DATOOO", data2);
 
   const isLocalhost = window.location.hostname === "localhost";
@@ -128,7 +126,7 @@ const ViewBooking = () => {
         `${ticketcurl}/${data?.booking_id}`,
         {
           headers: {
-           "api-key": API_KEY,
+            "api-key": API_KEY,
             Authorization: token,
             Accept: ACCEPT_HEADER,
           },
@@ -171,21 +169,22 @@ const ViewBooking = () => {
                 {data?.get_con === 0 && (
                   <div className="d-flex align-self-start align-self-lg-center align-items-center gap-3">
                     {/* <BsCalendarDate size={18} /> */}
-                    {
-                      data2?.booking_date &&<>
-                         <div className="text-muted fw-bold">BOOKING DATE - </div>
-                    
                     {data2?.booking_date && (
-                      <div>
-                        {moment(data2.booking_date).format("DD MMM'YY hh:mm a").toLowerCase()}
-                      </div>
-                    )}
-                      </>
-                    }
-                   
+                      <>
+                        <div className="text-muted fw-bold">
+                          BOOKING DATE -{" "}
+                        </div>
 
+                        {data2?.booking_date && (
+                          <div>
+                            {moment(data2.booking_date)
+                              .format("DD MMM'YY hh:mm a")
+                              .toLowerCase()}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                  
                 )}
                 {/* <div>
                       {moment(data2?.booking_date, "DD MMM YYYY HH:mm")
@@ -193,7 +192,7 @@ const ViewBooking = () => {
                         .toLowerCase()}
                     </div> */}
               </div>
-                
+
               <div className={`cardd p-3 shadow-sm classokkaro`}>
                 <div className="divviewopen" onClick={toggleview}>
                   <h4 className="d-flex gap-2">
@@ -279,7 +278,7 @@ const ViewBooking = () => {
                                   height: "50px",
                                   objectFit: "contain",
                                 }}
-                              // className="airline_logo"
+                                // className="airline_logo"
                               />
                             ) : airline === "Vistara" ? (
                               <img
@@ -608,7 +607,7 @@ const ViewBooking = () => {
                                       height: "50px",
                                       objectFit: "contain",
                                     }}
-                                  // className="airline_logo"
+                                    // className="airline_logo"
                                   />
                                 ) : airline === "Vistara" ? (
                                   <img
@@ -953,7 +952,6 @@ const ViewBooking = () => {
               </div>
 
               {/* <hr /> */}
-
             </div>
 
             {/* Right Side */}

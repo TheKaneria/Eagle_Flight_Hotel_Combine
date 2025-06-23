@@ -9,6 +9,7 @@ import ContactUs from "./Pages/ContactUs/ContactUs";
 import DashBoard from "./Pages/Dashboard/DashBoard";
 import Profile from "./Pages/Profile/Profile";
 import ViewBooking from "./Pages/ViewBooking/ViewBooking";
+import SeatSelection from "./Pages/SeatSelection/SeatSelection";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           path="/TicketBookingDetails"
           element={<TicketBookingDetails />}
         />
+        <Route path="/SeatSelcetion" element={<SeatSelection />} />
         <Route path="/dashboard" element={<DashBoard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/about" element={<AboutUs />} />
