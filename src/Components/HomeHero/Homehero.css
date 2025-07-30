@@ -77,7 +77,7 @@
 }
 
 .dropdown-wrapper {
-  padding: 8px 10px;
+  /* padding: 8px 10px; */
   /* border: 1px solid #ccc; */
   border-radius: 8px;
   /* display: flex; */
@@ -876,7 +876,6 @@
   background-color: #fff;
   border-radius: 16px;
   padding: 16px;
-
   align-items: flex-start;
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
     rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
@@ -945,7 +944,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 500;
 }
 
 .bus-arrow {
@@ -1001,10 +999,55 @@
 
 .bus-tabs {
   display: flex;
-  /* flex-wrap: wrap; */
   gap: 8px;
   margin-bottom: 10px;
-  /* justify-content: space-between; */
+}
+
+/*  */
+
+.bus-card-middle-clean {
+  background: #f8faff;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  font-family: "Inter", sans-serif;
+  font-size: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: max-content;
+}
+
+.row-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.left {
+  flex: 1;
+  text-align: left;
+  font-weight: 500;
+  color: #333;
+}
+
+.right {
+  flex: 1;
+  text-align: right;
+  font-weight: 500;
+  color: #333;
+}
+
+.arrow {
+  color: #ff6b00;
+  font-size: 1.1rem;
+}
+
+.seats-duration {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
 }
 
 .tab-btn {
@@ -1041,7 +1084,6 @@
 
 .pickupdiv,
 .dropdiv {
-  /* background-color: red; */
   width: 48%;
   padding: 1rem;
   height: 200px;
@@ -1049,7 +1091,7 @@
 }
 .pickupdiv::-webkit-scrollbar,
 .dropdiv::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
 .pickup-drop ul {
@@ -1062,6 +1104,9 @@
 .pickup-drop h4 {
   margin-bottom: 4px;
 }
+.mob-bus-card {
+  display: none;
+}
 
 @media (max-width: 768px) {
   .pickup-drop {
@@ -1073,17 +1118,128 @@
 /* Responsive Styles */
 @media (max-width: 768px) {
   .bus-card {
+    display: none;
+  }
+
+  .mob-bus-card {
+    display: block;
+    background-color: white;
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
+      rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+  }
+  .mob-bus-tabs-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 1rem;
+  }
+
+  .mob-bus-tabs {
+    width: 70%;
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+    gap: 8px;
+  }
+  .mob-bus-tabs::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+
+  .mob-tab-btn {
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.3s;
+    color: black;
+    min-width: 100px;
+    padding: 6px 12px;
+    white-space: nowrap;
+    background-color: transparent;
+    border: none;
+    border-radius: 8px;
+  }
+
+  .mob-tab-btn.active {
+    background-color: #f4511e;
+    color: white;
+    font-weight: bold;
+    min-width: 150px;
+  }
+
+  .bus-times {
+    margin-top: 10px;
+  }
+  .bus-time {
+    font-size: 1rem;
+  }
+  .bus-price {
+    font-weight: 800;
+    font-size: 20px;
+    padding-right: 10px;
+  }
+  .bus-list {
+    width: 100%;
+    padding: 0px;
+  }
+  .bus-card {
     flex-direction: column;
-    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .bus-title {
+    font-size: 18px;
+    margin-top: 10px;
+    margin-bottom: 8px;
+  }
+  .bus-card-left {
+    width: 100%;
+  }
+  .bus-type {
+    font-size: 12px;
   }
 
   .bus-card-right {
     align-items: flex-start;
   }
 
-  .view-seats {
-    width: 100%;
+  .mob-view-seats {
+    width: 30%;
     text-align: center;
+    background-color: #d32f2f;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: 800;
+    height: 40px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .mob-view-seats:hover {
+    background: #b71c1c;
+  }
+  .mob-pickup-drop {
+    display: flex;
+    justify-content: space-between;
+  }
+  .mobpickupdiv h5,
+  .mobdropdiv h5 {
+    font-size: 16px;
+    font-weight: 800;
+  }
+  .mabpickupdiv ul {
+    margin-left: 0px;
+    padding-left: 0px !important;
   }
 }
 
@@ -1321,6 +1477,7 @@
     flex-direction: column;
     gap: 10px;
     height: 100%;
+    margin-top: 3rem;
   }
   .flightsavailable2 {
     width: 95%;
@@ -1440,6 +1597,12 @@
     width: 50px;
     object-fit: contain;
   }
+}
+
+.bus-route-name {
+  font-size: 18px;
+  font-weight: 600;
+  min-width: 80px;
 }
 
 @media screen and (max-width: 352px) {

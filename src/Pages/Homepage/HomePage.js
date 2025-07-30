@@ -13,11 +13,20 @@ import axios from "axios";
 import moment from "moment";
 import {
   ACCEPT_HEADER,
+  getcancellationpolicy,
+  getcompanylist,
   supplierticketcurl,
   ticketcurl,
+  verifyCall,
 } from "../../Utils/Constant";
+import { useAuthContext } from "../../Context/auth_context";
+import HappySection from "../../Components/HappySection/HappySection";
+import WhyChooseUsBus from "../../Components/WhyChooseUsBus/WhyChooseUsBus";
+import CountSection from "../../Components/CountSection/CountSection";
+import { useBusContext } from "../../Context/bus_context";
 
 const HomePage = () => {
+  const { getCancellationPolicyApi } = useAuthContext();
   const [modalWidth, setModalWidth] = useState("90%");
 
   useLayoutEffect(() => {
@@ -56,18 +65,33 @@ const HomePage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [bookingid, setBookingId] = useState(null);
   const [login, SetLogin] = useState("");
+  const [getCompanyId, setCompanyId] = useState();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
     var islogin = localStorage.getItem("is_login");
+    var companyid = localStorage.getItem("companyid");
+    setCompanyId(companyid);
+
     SetLogin(islogin);
+
+    console.log("getCompanyId", getCompanyId);
 
     var role = localStorage.getItem("is_role");
     if (islogin) {
       setUserRole(JSON.parse(role));
     }
+
+    // if (getCompanyId){
+    //   console.log("truueeeee");
+
+    // }
+  }, []);
+
+  useEffect(() => {
+    getCancellationPolicy();
   }, []);
 
   const API_KEY =
@@ -151,6 +175,23 @@ const HomePage = () => {
     console.log("Booking ID cleared!");
   };
 
+  const { selectedTabMainHome } = useBusContext();
+
+  // Company List API
+
+  const getCancellationPolicy = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", getcancellationpolicy);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("companyId", 1);
+
+    const data = await getCancellationPolicyApi(formdata);
+    if (data) {
+      console.log("cancellation data", data);
+    }
+  };
+
   return (
     <div className="">
       <Helmet>
@@ -158,8 +199,19 @@ const HomePage = () => {
       </Helmet>
       <HomeHero />
       {/* <HeroTicketBooking /> */}
-      <WhyChooseUs />
-      <PartnerAirline />
+
+      {selectedTabMainHome === "buses" ? (
+        <>
+          <HappySection />
+          <WhyChooseUsBus />
+          <CountSection />
+        </>
+      ) : (
+        <>
+          <WhyChooseUs />
+          <PartnerAirline />
+        </>
+      )}
 
       <ReactModal
         isOpen={modalOpen}

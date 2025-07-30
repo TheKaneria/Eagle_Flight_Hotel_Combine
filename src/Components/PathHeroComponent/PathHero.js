@@ -3,14 +3,18 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 import { Link, useLocation } from "react-router-dom";
 
-const PathHero = ({ name }) => {
+const PathHero = ({ name,getSelectedTabService }) => {
   const location = useLocation();
 
   const path = location.pathname.split("/")[1];
   const breadcrumbLabel = path.charAt(0).toUpperCase() + path.slice(1);
 
   return (
-    <section className="container-fluid about_main mb-5">
+    <section
+  className={`container-fluid ${
+    getSelectedTabService === "flights" ? "about_main" : "about_main_bus"
+  } mb-5`}
+>
       <div className="bg_color">
         <div className="container">
           <div className="row banner-area mb-5">

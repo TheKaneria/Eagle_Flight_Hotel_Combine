@@ -4,6 +4,8 @@ const BaseUrl = "https://omairiq.azurewebsites.net/";
 const AirIQLiveBaseUrl = "http://testairiq.mywebcheck.in/TravelAPI.svc/";
 
 const BusBaseUrl = "http://itsplatformv2.itspl.net/api/";
+export const verifyCall =
+  "ITS_UAT_743960409278b60436124249057b187c5erBNWLQo33ec3";
 
 export const ACCEPT_HEADER = "application/x.eagleconnect.v1+json";
 
@@ -38,6 +40,8 @@ export const supplieravailabilitycurl = BaseUrl2 + "supplieravailabilitycurl";
 export const suppliersearchcurl = BaseUrl2 + "suppliersearchcurl";
 export const supplierbookcurl = BaseUrl2 + "supplierbookcurl";
 export const supplierticketcurl = BaseUrl2 + "supplierticketcurl";
+export const dynamic_curl = BaseUrl2 + "dynamic_curl";
+export const get_bus_booking = BaseUrl2 + "get-bus-booking";
 
 // Air IQ API
 export const sectors = BaseUrl + "sectors";
@@ -57,3 +61,23 @@ export const getcancellationpolicy = BusBaseUrl + "GetCancellationPolicy";
 export const getSources = BusBaseUrl + "GetSources";
 export const getDestination = BusBaseUrl + "GetDestinationsBasedOnSource";
 export const getRoutes = BusBaseUrl + "GetAvailableRoutes";
+export const seararrangementdetails =
+  BusBaseUrl + "GetSeatArrangementDetailsV3";
+export const getamenities = BusBaseUrl + "GetAmenities";
+export const getcitypair = BusBaseUrl + "GetCityPair";
+export const bookseat = BusBaseUrl + "BookSeatV3";
+export const bookseatdetails = BusBaseUrl + "BookSeatDetails";
+export const FetchTicketPrintData = BusBaseUrl + "FetchTicketPrintData";
+export const TicketStatus = BusBaseUrl + "TicketStatus";
+
+export const canceldetails = BusBaseUrl + "CancelDetails";
+export const confirmCancellation = BusBaseUrl + "ConfirmCancellation";
+export const cancellationPolicy = BusBaseUrl + "GetCancellationPolicy";
+export const GetJourneyDateWiseCancellationPolicy =
+  BusBaseUrl + "GetJourneyDateWiseCancellationPolicy";
+export const GetRouteWiseCancellationPolicy =
+  BusBaseUrl + "GetRouteWiseCancellationPolicy";
+export const partialcancellationdetails =
+  BusBaseUrl + "GetPartialCancellationDetails";
+export const confirmpartialcancellation =
+  BusBaseUrl + "ConfirmPartialCancellation";

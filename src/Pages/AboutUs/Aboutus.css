@@ -34,7 +34,36 @@
   border-radius: 10px;
   overflow: hidden;
 }
+.abtusbuscont {
+  max-width: 1340px;
+  margin: 1rem auto;
+}
 
+.abtusbuscontPtag {
+  font-size: 18px;
+  color: black;
+}
+.imgZoomContainer {
+  overflow: hidden;
+  border-radius: 20px;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.abtusbuscontImg {
+  border-radius: 20px;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.5s ease;
+}
+
+/* On hover, only the image zooms inside the fixed container */
+.imgZoomContainer:hover .abtusbuscontImg {
+  transform: scale(1.1);
+}
 @media screen and (max-width: 768px) {
   .banner-area {
     row-gap: 2rem;

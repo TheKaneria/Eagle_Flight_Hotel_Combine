@@ -14,8 +14,14 @@ import { FaUserPlus } from "react-icons/fa";
 import { MdDashboard, MdLogout } from "react-icons/md";
 import {
   ACCEPT_HEADER,
+  bookseatdetails,
+  FetchTicketPrintData,
   get_state,
+  getcompanylist,
   getcurrentaccountbalance,
+  TicketStatus,
+  TicketStatusApi,
+  verifyCall,
 } from "../../Utils/Constant";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { GrGoogle } from "react-icons/gr";
@@ -23,6 +29,8 @@ import { jwtDecode } from "jwt-decode";
 import { LoginSocialFacebook } from "reactjs-social-login";
 import { SiFacebook } from "react-icons/si";
 import { LOGIN_BEGIN_AIR_LIVE } from "../../Actions";
+import { useBusContext } from "../../Context/bus_context";
+import Notification from "../../Utils/Notification";
 
 const customStyles = {
   content: {
@@ -43,8 +51,11 @@ const customStyles = {
   },
 };
 const Navbar = () => {
+  const { GetBookSeatDetailsApi, fetchTicketPrintDataApi, TicketStatusApi } =
+    useBusContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpenBookTicket, setisModalOpenBookTicket] = useState(false);
   const [getemail, setEmail] = useState("");
   const [getpassword, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -81,7 +92,7 @@ const Navbar = () => {
   const [cancelcheque, setCancelCheque] = useState(null);
   const [getStateArray, SetState_Array] = useState([]);
   const [otpcondition, setOtpCondition] = useState(false);
-
+  const [pnrNumber, setPnrNumber] = useState("");
   const [forgotemail, setForgotEmail] = useState("");
   const [condition, setCondition] = useState(false);
   const [otp, setOtp] = useState("");
@@ -164,6 +175,9 @@ const Navbar = () => {
     forgot_password_loading,
     forgot_password_otp_loading,
     LoginnAirLive,
+    companyListBusApi,
+    currentAccountBalanceApi,
+    currentaccountbalance,
   } = useAuthContext();
 
   let navigate = useNavigate();
@@ -172,9 +186,29 @@ const Navbar = () => {
     var islogin = localStorage.getItem("is_login");
     SetLogin(islogin);
     var user = localStorage.getItem("is_user");
-    // console.log("NAvbar ma user", user);
     setUser(JSON.parse(user));
   }, []);
+
+  useEffect(() => {
+    currentAccountBalApi();
+  }, []);
+
+  const handleSubmitPNR = () => {
+    // your submit logic here
+    // console.log("Submitted PNR:", pnrNumber);
+    if (!pnrNumber || pnrNumber.trim() === "") {
+      Notification("error", "Error!", "Please enter a valid PNR number.");
+    }
+
+    getBookSeatDetails();
+    getTicketStatus();
+  };
+
+  const handlePrintPNR = () => {
+    // your print logic here
+    // window.print(); // or custom print logic
+    getPrintTicket();
+  };
 
   function logout() {
     localStorage.clear();
@@ -187,6 +221,57 @@ const Navbar = () => {
   };
   const modalopen3 = () => {
     setIsModalOpen3(true);
+  };
+
+  const getBookSeatDetails = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", bookseatdetails);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("pnrNo", pnrNumber);
+
+    const data = await GetBookSeatDetailsApi(formdata);
+
+    if (data) {
+      console.log("get book seat data", data);
+      if (data.status == 1) {
+        setPnrNumber("");
+      }
+    }
+  };
+
+  const getTicketStatus = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", TicketStatus);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("pnrNo", pnrNumber);
+
+    const data = await TicketStatusApi(formdata);
+
+    if (data) {
+      console.log("get ticket status data", data);
+      if (data.status == 1) {
+        setPnrNumber("");
+      }
+    }
+  };
+
+  const getPrintTicket = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", FetchTicketPrintData);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("pnrNo", pnrNumber);
+
+    const data = await fetchTicketPrintDataApi(formdata);
+
+    if (data) {
+      console.log("get book seat data", data);
+      if (data.status == 1) {
+        setPnrNumber("");
+      }
+    }
   };
 
   // Login api
@@ -207,8 +292,38 @@ const Navbar = () => {
       // setIsModalOpen(false);
       // setEmail("");
       // setPassword("");
-      window.location.reload(false);
+      // window.location.reload(false);
       // }
+    }
+  };
+
+  // Company List API
+
+  const companyListApi = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", getcompanylist);
+    await formdata.append("verifyCall", verifyCall);
+
+    const data = await companyListBusApi(formdata);
+    if (data) {
+      console.log("data", data);
+      // window.location.reload(false);
+    }
+  };
+
+  //  Current Account Balance API
+
+  const currentAccountBalApi = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", getcurrentaccountbalance);
+    await formdata.append("verifyCall", verifyCall);
+
+    const data = await currentAccountBalanceApi(formdata);
+    if (data) {
+      // console.log("data ok", data);
+      // window.location.reload(false);
     }
   };
 
@@ -269,7 +384,8 @@ const Navbar = () => {
         localStorage.setItem("is_id", JSON.stringify(data.user.id));
         localStorage.setItem("is_user", JSON.stringify(data.user));
         localStorage.setItem("is_role", JSON.stringify(data.user.role));
-        Login();
+        // Login();
+        companyListApi();
       }
     }
   };
@@ -284,11 +400,13 @@ const Navbar = () => {
       const data = await confirmOtp(formdata);
       if (data) {
         if (data.success == 1) {
-          Login();
+          // Login();
+          companyListApi();
+
           setIsModalOpen(false);
           setEmail("");
           setPassword("");
-          // window.location.reload(false);
+          window.location.reload(false);
           // navigate("/profile-page");
         }
       }
@@ -539,6 +657,7 @@ const Navbar = () => {
       }
     }
   };
+
   const ForgotPassOtpApi = async (e) => {
     if (otp === "") {
       alert("Enter the Email......!");
@@ -711,7 +830,7 @@ const Navbar = () => {
                           Current Balance
                         </div>
                         <div className="fw-bold" style={{ color: "#362a60" }}>
-                          &#8377; 4706243
+                          &#8377; {currentaccountbalance}
                         </div>
                       </div>
 
@@ -1597,6 +1716,50 @@ const Navbar = () => {
               {forgot_password_loading === true ? "Loading..." : "Send OTP"}
             </button>
           )}
+        </div>
+      </ReactModal>
+
+      <ReactModal
+        isOpen={isModalOpenBookTicket}
+        style={customStyles}
+        onRequestClose={() => setisModalOpenBookTicket(false)}
+      >
+        <div className="home_model_4wrapp home_model_4wrapp_resp_padding">
+          <button
+            className="login_modal_close"
+            onClick={() => setisModalOpenBookTicket(false)}
+          >
+            <IoCloseCircle color="#e8381b" size={30} />
+          </button>
+
+          <div className="d-flex text-center my-4">
+            <p
+              className="fw-bold fs-4"
+              style={{ color: "#362a60", marginBottom: "0px" }}
+            >
+              Enter PNR Number
+            </p>
+          </div>
+
+          <div className="modal_inputdiv">
+            <div className="modal_inptheading">PNR Number *</div>
+            <input
+              type="text"
+              placeholder="Enter your PNR Number"
+              className="w-100 text-start modal_input"
+              value={pnrNumber}
+              onChange={(e) => setPnrNumber(e.target.value)}
+            />
+          </div>
+
+          <div className="text-center mt-4 d-flex justify-content-center gap-3">
+            <button className="login-btn" onClick={handleSubmitPNR}>
+              Submit
+            </button>
+            <button className="login-btn" onClick={handlePrintPNR}>
+              Print
+            </button>
+          </div>
         </div>
       </ReactModal>
     </div>

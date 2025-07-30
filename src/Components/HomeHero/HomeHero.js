@@ -7,10 +7,12 @@ import {
   FaBed,
   FaCar,
   FaIndianRupeeSign,
+  FaTv,
+  FaBottleWater,
 } from "react-icons/fa6";
 import { BsBusFront, BsBatteryCharging } from "react-icons/bs";
 import { IoAirplaneSharp } from "react-icons/io5";
-import { BiSolidPlaneAlt } from "react-icons/bi";
+import { BiBlanket, BiSolidPlaneAlt } from "react-icons/bi";
 import { LuLampDesk } from "react-icons/lu";
 import { GiWaterBottle } from "react-icons/gi";
 import {
@@ -29,13 +31,20 @@ import {
   ACCEPT_HEADER1,
   availabilitycurl,
   get_recent_search,
+  getamenities,
   getcancellationpolicy,
+  getcitypair,
   getcompanylist,
+  getDestination,
+  getRoutes,
+  getSources,
   recent_search,
+  seararrangementdetails,
   searchcurl,
   sectorscurl,
   supplieravailabilitycurl,
   suppliersearchcurl,
+  verifyCall,
 } from "../../Utils/Constant";
 import axios from "axios";
 import Notification from "../../Utils/Notification";
@@ -44,9 +53,12 @@ import { Link, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { DatePicker } from "antd";
 import { Swiper, SwiperSlide } from "swiper/react";
+import { IoIosBatteryCharging } from "react-icons/io";
 import "swiper/css";
 import "swiper/css/navigation";
 import { Navigation } from "swiper/modules";
+import { useAuthContext } from "../../Context/auth_context";
+
 import {
   motion,
   useScroll,
@@ -56,6 +68,7 @@ import {
   useAnimation,
 } from "framer-motion";
 import { useBusContext } from "../../Context/bus_context";
+import Divider, { dividerClasses } from "@mui/material/Divider";
 
 const tabs = [
   { name: "Flights", icon: <FaPlaneDeparture size={25} />, key: "flights" },
@@ -70,71 +83,13 @@ const tabs = [
 const options = ["Return", "One-way", "Multi-city"];
 const classes = ["Economy", "Business", "First"];
 
-const onewdatetest = [
-  { onward_date: "2025-05-03" },
-  { onward_date: "2025-05-03" },
-  { onward_date: "2025-05-04" },
-  { onward_date: "2025-05-05" },
-];
-
-const Availdatetest = ["2025-05-04", "2025-05-04", "2025-05-05", "2025-05-06"];
-
-const statikDato = [
-  {
-    CityId: 1,
-    CityName: "Rajkot",
-  },
-  {
-    CityId: 2,
-    CityName: "Amdavad",
-  },
-  {
-    CityId: 3,
-    CityName: "Gondal",
-  },
-  {
-    CityId: 4,
-    CityName: "Porbandar",
-  },
-];
-
-const buses = [
-  {
-    RouteName: "Rajkot To Mumbai",
-    title: "Eagle Express",
-    BusTypeName: "A/C Sleeper",
-    ArrangementName: "2 X 1 (30) A/C SLEEPEREGULAR",
-    rating: 4.3,
-    reviews: 94,
-    CityTime: "17:00",
-    ArrivalTime: "20:30",
-    duration: "3h 30m",
-    EmptySeats: "36 Seats (12 Single)",
-    price: 300,
-    tag: "On Time",
-    tagColor: "#E3E7F0",
-  },
-  {
-    RouteName: "Rajkot To Mumbai",
-    title: "Eagle Express",
-    BusTypeName: "Volvo A/C Seater ",
-    ArrangementName: "2 X 2 (56) NON A/C SLEEPER COACH",
-    rating: 3.9,
-    reviews: 113,
-    CityTime: "06:45",
-    ArrivalTime: "10:00",
-    duration: "3h 15m",
-    EmptySeats: "44 Seats",
-    price: 300,
-    tag: "Direct Bus",
-    tagColor: "#E3E7F0",
-  },
-];
-
 const HomeHero = () => {
   const animatedComponents = makeAnimated();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [selectedtab, setSelectedtab] = useState("flights");
+  // const [selectedtab, setSelectedtab] = useState("buses");
+  const [selectedtab, setSelectedtab] = useState(() => {
+    return localStorage.getItem("selectedTab") || "buses";
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [mergedData, setMergedData] = useState([]);
   const [filteredFromdata, setFilteredFromData] = useState([]);
@@ -149,6 +104,13 @@ const HomeHero = () => {
     child: 0,
     infant: 0,
   });
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  const { cancellation_policy } = useAuthContext();
+
+  useEffect(() => {
+    localStorage.setItem("selectedTab", selectedtab);
+  }, [selectedtab]);
 
   const handleSelecttripoption = (opt) => {
     if (opt === "One-way") {
@@ -214,14 +176,14 @@ const HomeHero = () => {
     }),
     menu: (provided) => ({
       ...provided,
-      zIndex: 9999, // Ensure menu appears above other elements
-      position: "absolute", // Make sure menu is positioned absolutely
-      width: "100%", // Match the width of the select
+      zIndex: 9999,
+      position: "absolute",
+      width: "100%",
     }),
     menuList: (provided) => ({
       ...provided,
-      maxHeight: "300px", // Limit height and enable scrolling
-      overflowY: "auto", // Enable vertical scrolling
+      maxHeight: "300px",
+      overflowY: "auto",
     }),
     valueContainer: (provided) => ({
       ...provided,
@@ -237,6 +199,13 @@ const HomeHero = () => {
     }),
     indicatorSeparator: () => ({
       display: "none",
+    }),
+    // ✅ Add this to remove the blue highlight
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? "#4a90e2" : "white", // customize this as needed
+      color: state.isFocused ? "white" : "black",
+      cursor: "pointer",
     }),
   };
 
@@ -332,6 +301,8 @@ const HomeHero = () => {
   const [hasSwappedOnce, setHasSwappedOnce] = useState(false);
   const [sortedFlights, setsortedFlights] = useState([]);
   const [sortedCheapFlights, setsortedCheapFlights] = useState([]);
+  const [fromBusId, setFromBusId] = useState();
+  const [toBusId, setToBusId] = useState();
 
   const monthMap = {
     Jan: "01",
@@ -362,6 +333,7 @@ const HomeHero = () => {
   const [traveller, setTraveller] = useState("");
   const [date1, setDate1] = useState("");
   const [date2, setDate2] = useState("");
+  const [getCompanyId, setCompanyId] = useState();
 
   const sortKey = getCondition ? "price" : "per_adult_child_price";
 
@@ -377,6 +349,11 @@ const HomeHero = () => {
 
     setsortedCheapFlights(sortedcheap);
   }, [getSearchFlightListData, getSearchFlightListDataCheap]);
+
+  useEffect(() => {
+    var companyid = localStorage.getItem("companyid");
+    setCompanyId(companyid);
+  }, []);
 
   const navigate = useNavigate();
 
@@ -1940,52 +1917,6 @@ const HomeHero = () => {
   const controls1 = useAnimation();
   const controls2 = useAnimation();
 
-  const BUSGetCompanyList = async () => {
-    try {
-      const response = await axios.post(
-        getcompanylist,
-        {
-          verifyCall: "ITS_UAT_74396040927B60436124249057b187C5erBNMLQo33ec3",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "*/*",
-          },
-        }
-      );
-
-      console.log("Company List:", response.data.data.ITSCompanyList);
-      localStorage.setItem(
-        "CompanyID",
-        response.data.data.ITSCompanyList[0]?.companyID
-      );
-    } catch (error) {
-      console.error("API error:", error);
-    }
-  };
-
-  const [cancellationPolicy, setCancellationPolicy] = useState([]);
-  const BusGetCancellationPolicy = async () => {
-    const formdata = new FormData();
-    formdata.append(
-      "verifyCall",
-      "ITS_UAT_74396040927B60436124249057b187C5erBNMLQo33ec3"
-    );
-    formdata.append("companyID", 1);
-    try {
-      const res = axios.post(getcancellationpolicy, formdata, {
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "*/*",
-        },
-      });
-      console.log("poli see ", res.date.data);
-    } catch (error) {
-      console.log("kaik error aave he ", error);
-    }
-  };
-
   const {
     GetSources,
     GetDestination,
@@ -1993,11 +1924,65 @@ const HomeHero = () => {
     source_data,
     GetRoutes,
     route_data,
+    GetSeatArrangementDetail,
+    GetAmenitiesApi,
+    GetCityPairApi,
+    route_loading,
+    Fromcity,
+    Tocity,
+    from_city,
+    to_city,
+    TabSelection,
+    selectedTab,
   } = useBusContext();
 
+  // console.log("route_data", route_data);
+
+  useEffect(() => {
+    if (from_city) {
+      setFrom(from_city);
+      setFromBusId(from_city.CityID);
+      getDestinationBus(from_city.CityID);
+    } else {
+      setFrom("");
+      Fromcity("");
+    }
+    if (to_city) {
+      setTo(to_city);
+      setToBusId(to_city.CityID);
+    } else {
+      setTo("");
+      Tocity("");
+    }
+  }, [to_city, from_city]);
+
   const handleSelectBus = async (item) => {
-    setFrom(item?.CityName);
-    // GetDestination(item.cityId);
+    if (item) {
+      setFrom(item);
+      Fromcity(item);
+      setFromBusId(item.CityID);
+      getDestinationBus(item.CityID);
+    } else {
+      setFrom(null);
+      Fromcity("");
+      setTo(null);
+      setFromBusId(null);
+      setToBusId(null);
+      getDestinationBus(null);
+    }
+  };
+
+  const handleSelectBusTo = async (item) => {
+    if (item) {
+      setTo(item);
+      Tocity(item);
+      setToBusId(item.CityID);
+      // GetRoutes(item.CityID);
+    } else {
+      setTo(null);
+      Tocity("");
+      setToBusId(null);
+    }
   };
 
   const [activeTabIndex, setActiveTabIndex] = useState(null);
@@ -2073,9 +2058,123 @@ const HomeHero = () => {
       setUserRole(JSON.parse(role));
     }
     // BUSGetCompanyList();
-    // GetSources();
+    getSourceBus();
     GetRecentSearch();
   }, []);
+
+  useEffect(() => {
+    getAmenitiesBus();
+    getCityPairBus();
+  }, []);
+
+  const getSourceBus = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", getSources);
+    await formdata.append("verifyCall", verifyCall);
+
+    const data = await GetSources(formdata);
+    if (data) {
+      console.log("bus source data", data);
+    }
+  };
+
+  const getDestinationBus = async (sourceId) => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", getDestination);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("sourceID", sourceId);
+
+    const data = await GetDestination(formdata);
+    if (data) {
+      console.log("bus destination data", data);
+    }
+  };
+
+  const getRouteBus = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", getRoutes);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("fromID", fromBusId);
+    await formdata.append("toID", toBusId);
+    await formdata.append("JourneyDate", moment(date1).format("DD-MM-YYYY"));
+
+    const data = await GetRoutes(formdata);
+    if (data) {
+      console.log("bus route data", data);
+    }
+  };
+
+  const getSeatArrangementBus = async (referenceno) => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", seararrangementdetails);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("referenceNumber", referenceno);
+
+    const data = await GetSeatArrangementDetail(formdata);
+    if (data) {
+      console.log("bus seat arrangement data", data);
+    }
+  };
+  const getAmenitiesBus = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", getamenities);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("companyID", getCompanyId);
+
+    const data = await GetAmenitiesApi(formdata);
+
+    if (data) {
+      console.log("Amenities data", data);
+    }
+  };
+
+  const getCityPairBus = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", getcitypair);
+    await formdata.append("verifyCall", verifyCall);
+
+    const data = await GetCityPairApi(formdata);
+
+    if (data) {
+      console.log("get city pair data", data);
+    }
+  };
+
+  const calculateDuration = (startTime, endTime) => {
+    const start = moment(startTime, "hh:mm A");
+    const end = moment(endTime, "hh:mm A");
+
+    if (end.isBefore(start)) {
+      end.add(1, "day"); // Overnight
+    }
+
+    const duration = moment.duration(end.diff(start));
+    const hours = Math.floor(duration.asHours());
+    const minutes = duration.minutes();
+
+    return `${hours}h ${minutes}m`;
+  };
+
+  const parsePoints = (pointsString) => {
+    if (!pointsString) return [];
+
+    return pointsString.split("#").map((entry) => {
+      const parts = entry.split("|");
+      // Format: Time - Location
+      return `${parts[2]} - ${parts[1]}`;
+    });
+  };
+
+  const handleShowMore = () => {
+    setVisibleCount((prevCount) => prevCount + 10);
+  };
+  const visibleData = route_data?.slice(0, visibleCount);
 
   return (
     <section className="containerr container-fluid">
@@ -2084,7 +2183,14 @@ const HomeHero = () => {
           <div className="W5IJ-mod-limit-width">
             <h2 className="AQWr-mod-margin-bottom-xlarge c0qPo">
               {/* <span>Compare flight deals from 100s of sites</span> */}
-              <span>Compare flight deals from 100s of sites</span>
+              {selectedtab === "buses" ? (
+                <span>
+                  <span>Welcome to Eagle Travels</span>{" "}
+                  <span>A Step Ahead... Always!</span>
+                </span>
+              ) : (
+                <span>Compare flight deals from 100s of sites</span>
+              )}
               <span className="c9DqH">.</span>
             </h2>
             <div className="tabs-container">
@@ -2092,7 +2198,10 @@ const HomeHero = () => {
                 <div
                   key={tab.key}
                   className="tab-wrapper"
-                  onClick={() => setSelectedtab(tab.key)}
+                  onClick={() => {
+                    TabSelection(tab.key);
+                    setSelectedtab(tab.key);
+                  }}
                 >
                   <div
                     className={`tab-icon-box ${
@@ -2106,9 +2215,7 @@ const HomeHero = () => {
               ))}
             </div>
 
-            {selectedtab === "buses" ? (
-              <></>
-            ) : (
+            {selectedtab === "flights" ? (
               <div className="J_T2">
                 <div className="J_T2-header">
                   <div
@@ -2142,7 +2249,10 @@ const HomeHero = () => {
                   )}
                 </div>
               </div>
+            ) : (
+              <></>
             )}
+
             <div className="flight-search-bar">
               <div className="from-section">
                 <Select
@@ -2150,33 +2260,38 @@ const HomeHero = () => {
                   onChange={
                     selectedtab === "buses" ? handleSelectBus : handleSelect
                   }
-                  options={selectedtab === "buses" ? statikDato : mergedData}
+                  options={selectedtab === "buses" ? source_data : mergedData}
                   isLoading={depcitylistload}
                   styles={customStyles}
                   isClearable={true}
                   placeholder="From?"
+                  isSearchable={true}
+                  getOptionLabel={(data) => {
+                    return selectedtab === "buses"
+                      ? data.CityName
+                      : `${data.city_name || data.CityName} (${
+                          data.airport_code
+                        })`;
+                  }}
                   formatOptionLabel={(data, { context }) => {
                     if (context === "menu") {
-                      // Dropdown open hoy tyare
-                      return (
+                      return selectedtab === "buses" ? (
+                        <div>{data.CityName}</div>
+                      ) : (
                         <div>
-                          <div>
-                            {data.city_name ? data.city_name : data.CityName}
+                          <div>{data.city_name || data.CityName}</div>
+                          <div style={{ fontSize: "12px" }}>
+                            {data.airport_name}{" "}
+                            <span style={{ color: "#f45500" }}>
+                              ({data.airport_code})
+                            </span>
                           </div>
-                          {selectedtab === "buses" ? (
-                            <> </>
-                          ) : (
-                            <div style={{ fontSize: "12px" }}>
-                              {data.airport_name}{" "}
-                              <span style={{ color: "#f45500" }}>
-                                ({data.airport_code})
-                              </span>
-                            </div>
-                          )}
                         </div>
                       );
                     } else {
-                      return (
+                      return selectedtab === "buses" ? (
+                        <div className="fw-bold">{data.CityName}</div>
+                      ) : (
                         <div>
                           {data.city_name}{" "}
                           <span style={{ color: "#f45500" }}>
@@ -2211,37 +2326,59 @@ const HomeHero = () => {
               <div className="to-section">
                 <Select
                   value={to}
-                  onChange={handleSelect2}
-                  options={getSectorListTo}
+                  onChange={
+                    selectedtab === "buses" ? handleSelectBusTo : handleSelect2
+                  }
+                  options={
+                    selectedtab === "buses" ? destination_data : getSectorListTo
+                  }
                   isLoading={arrcitylistload}
                   styles={customStyles}
                   placeholder="To?"
                   isClearable={true}
+                  isSearchable={true}
+                  getOptionLabel={(data) => {
+                    if (selectedtab === "buses") {
+                      return data.CityName;
+                    } else {
+                      const city = data.city_name || data.destination;
+                      const code = data.airport_code || data.DestinationCode;
+                      return `${city} (${code})`;
+                    }
+                  }}
                   formatOptionLabel={(data, { context }) => {
                     if (context === "menu") {
-                      // Dropdown open hoy tyare
                       return (
                         <div>
-                          <div>
-                            {data.city_name ? data.city_name : data.destination}
-                          </div>
-                          <div style={{ fontSize: "12px" }}>
-                            {data.airport_name}{" "}
-                            <span style={{ color: "#f45500" }}>
-                              (
-                              {data.airport_code
-                                ? data.airport_code
-                                : data.DestinationCode}
-                              )
-                            </span>
-                          </div>
+                          {selectedtab === "buses" ? (
+                            <div>{data.CityName}</div>
+                          ) : (
+                            <>
+                              <div>
+                                {data.city_name
+                                  ? data.city_name
+                                  : data.destination}
+                              </div>
+                              <div style={{ fontSize: "12px" }}>
+                                {data.airport_name}{" "}
+                                <span style={{ color: "#f45500" }}>
+                                  (
+                                  {data.airport_code
+                                    ? data.airport_code
+                                    : data.DestinationCode}
+                                  )
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       );
                     } else {
-                      return (
+                      return selectedtab === "buses" ? (
+                        <div className="fw-bold">{data.CityName}</div>
+                      ) : (
                         <div>
                           {data.city_name ? data.city_name : data.destination}{" "}
-                          {""}
                           <span style={{ color: "#f45500" }}>
                             (
                             {data.airport_code
@@ -2265,7 +2402,14 @@ const HomeHero = () => {
                   onChange={onChange}
                   placeholder={selectedtab === "buses" ? "Date" : "Departure"}
                   format="ddd D/M"
-                  disabledDate={disableAllExceptApiDates}
+                  disabledDate={(current) => {
+                    const today = dayjs().startOf("day");
+                    const sixMonthsLater = today.add(6, "month").endOf("day");
+                    return (
+                      current && (current < today || current > sixMonthsLater)
+                    );
+                  }}
+                  // disabledDate={disableAllExceptApiDates}
                   value={
                     selectedDate || defaultMonth
                       ? dayjs(selectedDate || defaultMonth)
@@ -2302,119 +2446,127 @@ const HomeHero = () => {
                     />
                   </div>
                 ))}
-              <div
-                className="traveler-section"
-                onClick={toggleDropdownTraveler}
-              >
-                {totalTravellers} Travellers{" "}
-                {isDropdownOpenTraveler && (
-                  <div className="travellers-dropdown2">
-                    <div className="fw-bold mb-2 fs-5">Travellers</div>
-                    <div className="traveller-category">
-                      <span>Adult 12+Yrs</span>
-                      <div className="counter">
-                        <button
-                          className="minus"
-                          onClick={() => handleCounterChange("adult", -1)}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="text"
-                          style={{
-                            fontSize: "14px",
-                            width: "30px",
-                            border: "none",
-                          }}
-                          value={travellers.adult}
-                          readOnly
-                        />
-                        <button
-                          className="plus"
-                          onClick={() => handleCounterChange("adult", 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    <div className="traveller-category">
-                      <span>Child 2-12 Yrs</span>
-                      <div className="counter">
-                        <button
-                          className="minus"
-                          onClick={() => handleCounterChange("child", -1)}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="text"
-                          style={{
-                            fontSize: "14px",
-                            width: "30px",
-                            border: "none",
-                          }}
-                          value={travellers.child}
-                          readOnly
-                        />
-                        <button
-                          className="plus"
-                          onClick={() => handleCounterChange("child", 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    <div className="traveller-category">
-                      <span>Infant 0-2 Yrs</span>
-                      <div className="counter">
-                        <button
-                          className="minus"
-                          onClick={() => handleCounterChange("infant", -1)}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="text"
-                          style={{
-                            fontSize: "14px",
-                            width: "30px",
-                            border: "none",
-                          }}
-                          value={travellers.infant}
-                          readOnly
-                        />
-                        <button
-                          className="plus"
-                          onClick={() => handleCounterChange("infant", 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-
-                    <div
-                      className="mt-3"
-                      style={{ border: "1px solid #eee" }}
-                    ></div>
-                    <div className="mt-3 fw-bold text-dark">Cabin Class</div>
-                    <div className="d-flex gap-3 flex-wrap mt-2">
-                      {classes.map((classOption) => (
-                        <div
-                          key={classOption}
-                          className={`classselekt ${
-                            selectedClass === classOption ? "selected" : ""
-                          }`}
-                          onClick={() => setSelectedClass(classOption)}
-                        >
-                          {classOption}
+              {selectedtab === "buses" ? (
+                <></>
+              ) : (
+                <>
+                  <div
+                    className="traveler-section"
+                    onClick={toggleDropdownTraveler}
+                  >
+                    {totalTravellers} Travellers{" "}
+                    {isDropdownOpenTraveler && (
+                      <div className="travellers-dropdown2">
+                        <div className="fw-bold mb-2 fs-5">Travellers</div>
+                        <div className="traveller-category">
+                          <span>Adult 12+Yrs</span>
+                          <div className="counter">
+                            <button
+                              className="minus"
+                              onClick={() => handleCounterChange("adult", -1)}
+                            >
+                              -
+                            </button>
+                            <input
+                              type="text"
+                              style={{
+                                fontSize: "14px",
+                                width: "30px",
+                                border: "none",
+                              }}
+                              value={travellers.adult}
+                              readOnly
+                            />
+                            <button
+                              className="plus"
+                              onClick={() => handleCounterChange("adult", 1)}
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+                        <div className="traveller-category">
+                          <span>Child 2-12 Yrs</span>
+                          <div className="counter">
+                            <button
+                              className="minus"
+                              onClick={() => handleCounterChange("child", -1)}
+                            >
+                              -
+                            </button>
+                            <input
+                              type="text"
+                              style={{
+                                fontSize: "14px",
+                                width: "30px",
+                                border: "none",
+                              }}
+                              value={travellers.child}
+                              readOnly
+                            />
+                            <button
+                              className="plus"
+                              onClick={() => handleCounterChange("child", 1)}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        <div className="traveller-category">
+                          <span>Infant 0-2 Yrs</span>
+                          <div className="counter">
+                            <button
+                              className="minus"
+                              onClick={() => handleCounterChange("infant", -1)}
+                            >
+                              -
+                            </button>
+                            <input
+                              type="text"
+                              style={{
+                                fontSize: "14px",
+                                width: "30px",
+                                border: "none",
+                              }}
+                              value={travellers.infant}
+                              readOnly
+                            />
+                            <button
+                              className="plus"
+                              onClick={() => handleCounterChange("infant", 1)}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
 
-              <button
+                        <div
+                          className="mt-3"
+                          style={{ border: "1px solid #eee" }}
+                        ></div>
+                        <div className="mt-3 fw-bold text-dark">
+                          Cabin Class
+                        </div>
+                        <div className="d-flex gap-3 flex-wrap mt-2">
+                          {classes.map((classOption) => (
+                            <div
+                              key={classOption}
+                              className={`classselekt ${
+                                selectedClass === classOption ? "selected" : ""
+                              }`}
+                              onClick={() => setSelectedClass(classOption)}
+                            >
+                              {classOption}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* <button
                 className="search-button"
                 onClick={() => {
                   // setRecentSearchCondition(true);
@@ -2428,14 +2580,28 @@ const HomeHero = () => {
                 }}
               >
                 <FaSearch />
+              </button> */}
+              <button
+                className="search-button"
+                onClick={() => {
+                  {
+                    selectedtab === "buses" ? getRouteBus() : <></>;
+                  }
+                }}
+              >
+                <FaSearch />
               </button>
               <button
                 className="search-buttonRes"
                 onClick={() => {
+                  {
+                    selectedTab === "buses"
+                      ? getRouteBus()
+                      : searchFlightData();
+                  }
                   // setRecentSearchCondition(true);
-
                   // if (getCondition == 0) {
-                  searchFlightData();
+
                   setSelectedIndex(null);
                   // } else if (getCondition == 1) {
                   // searchFlight();
@@ -2458,19 +2624,19 @@ const HomeHero = () => {
               style={{ y: y1 }}
             >
               <img
-                src={images.flight1}
+                src={selectedtab === "buses" ? images.bus1 : images.flight1}
                 className="rounded-xl object-cover h-24 md:h-32"
-                style={{ width: "220px", height: "220px" }}
+                style={{ width: "220px", height: "220px", borderRadius: 40 }}
               />
               <img
-                src={images.flight2}
+                src={selectedtab === "buses" ? images.bus2 : images.flight2}
                 className="rounded-xl object-cover h-40 md:h-48"
-                style={{ width: "220px", height: "220px" }}
+                style={{ width: "220px", height: "220px", borderRadius: 40 }}
               />
               <img
-                src={images.flight3}
+                src={selectedtab === "buses" ? images.bus4 : images.flight3}
                 className="rounded-xl object-cover h-32 md:h-40"
-                style={{ width: "220px", height: "220px" }}
+                style={{ width: "220px", height: "220px", borderRadius: 40 }}
               />
             </motion.div>
 
@@ -2481,9 +2647,9 @@ const HomeHero = () => {
               style={{ y: y2 }}
             >
               <img
-                src={images.flight4}
+                src={selectedtab === "buses" ? images.bus3 : images.flight4}
                 className="rounded-xl object-cover h-24 md:h-32"
-                style={{ width: "220px", height: "220px" }}
+                style={{ width: "220px", height: "220px", borderRadius: 40 }}
               />
               <img
                 src={images.flight5}
@@ -4519,260 +4685,563 @@ const HomeHero = () => {
           {selectedtab === "buses" && (
             <>
               <div className="bus-list">
-                {buses.map((bus, index) => (
-                  <div key={index} className="bus-card">
-                    <div className="d-flex justify-content-between">
-                      <div className="bus-card-left">
-                        <div
-                          className="bus-tag"
-                          style={{ backgroundColor: bus.tagColor }}
-                        >
-                          {bus.tag}
+                {route_loading ? (
+                  <>
+                    <div>
+                      <div
+                        style={{
+                          width: "100%",
+                          // height: "80vh",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginTop: "2rem",
+                        }}
+                      >
+                        <div className="loader">
+                          <div className="spinner"></div>
+                          <p className="loading-text">Loading...</p>
                         </div>
-                        <div className="bus-title">{bus.title}</div>
-                        <div className="bus-type">{bus.BusTypeName}</div>
-                        <div className="bus-type">{bus.ArrangementName}</div>
-                      </div>
-                      <div className="bus-card-middle">
-                        <div className="bus-rating">
-                          <span className="rating-star">★ {bus.rating}</span>
-                          <span className="rating-count">{bus.reviews}</span>
-                        </div>
-                        <div className="bus-times">
-                          <span className="bus-time">{bus.CityTime}</span>
-                          <span className="bus-arrow">—</span>
-                          <span className="bus-time">{bus.ArrivalTime}</span>
-                        </div>
-                        <div className="bus-duration">
-                          {bus.duration} • {bus.EmptySeats}
-                        </div>
-                      </div>
-                      <div className="bus-card-right">
-                        <div className="bus-price">₹{bus.price}</div>
-                        <div className="onwards">Onwards</div>
                       </div>
                     </div>
-                    <div
-                      style={{ border: "1px solid #eee", marginTop: "1rem" }}
-                    />{" "}
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div className="bus-tabs-container">
-                        <div className="bus-tabs">
-                          {["Amenities", "Pickup & Drops", "Policies"].map(
-                            (tab) => (
-                              <button
-                                key={tab}
-                                className={`tab-btn ${
-                                  activeTabIndex === index &&
-                                  activeTabName === tab
-                                    ? "active"
-                                    : ""
-                                }`}
-                                onClick={() => toggleTab(index, tab)}
+                  </>
+                ) : (
+                  <>
+                    {visibleData?.map((bus, index) => (
+                      <div key={index}>
+                        {/* Desktop Bus Card */}
+                        <div className="bus-card">
+                          <div className="d-flex justify-content-between">
+                            <div className="bus-card-left">
+                              <div
+                                className="bus-tag"
+                                style={{ backgroundColor: bus.tagColor }}
                               >
-                                {tab} <GoChevronDown />
-                              </button>
-                            )
+                                {bus.tag}
+                                {index}
+                              </div>
+                              <div className="bus-title">Eagle Express</div>
+                              <div className="d-flex flex-row flex-lg-column">
+                                <div className="bus-type">
+                                  {bus.BusTypeName}
+                                </div>
+                                <div className="bus-type">
+                                  {bus.ArrangementName}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="bus-card-middle">
+                              <div className="bus-times">
+                                <span className="bus-time">{bus.CityTime}</span>
+                                <span className="bus-arrow">—</span>
+                                <span className="bus-time">
+                                  {bus.ArrivalTime}
+                                </span>
+                              </div>
+                              <div className="bus-duration">
+                                {calculateDuration(
+                                  bus.CityTime,
+                                  bus.ArrivalTime
+                                )}{" "}
+                                • {bus.EmptySeats} Seats
+                              </div>
+                            </div>
+                            <div className="bus-card-right">
+                              <div className="bus-price">₹{bus.AcSeatRate}</div>
+                              <div className="onwards">Onwards</div>
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              border: "1px solid #eee",
+                              marginTop: "1rem",
+                            }}
+                          />
+                          <div className="d-flex justify-content-between align-items-start">
+                            <div className="bus-tabs-container">
+                              <div className="bus-tabs">
+                                {[
+                                  "Amenities",
+                                  "Pickup & Drops",
+                                  "Policies",
+                                ].map((tab) => (
+                                  <button
+                                    key={tab}
+                                    className={`tab-btn ${
+                                      activeTabIndex === index &&
+                                      activeTabName === tab
+                                        ? "active"
+                                        : ""
+                                    }`}
+                                    onClick={() => toggleTab(index, tab)}
+                                  >
+                                    {tab} <GoChevronDown />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <Link
+                              onClick={() =>
+                                getSeatArrangementBus(bus.ReferenceNumber)
+                              }
+                              to="/SeatSelcetion"
+                              state={{ bus: bus, sittingType: bus.BusSeatType }}
+                              className="view-seats"
+                            >
+                              Select Seat
+                            </Link>
+                          </div>
+                          {activeTabIndex === index && (
+                            <div className="tab-content">
+                              {activeTabName === "Policies" && (
+                                <div
+                                  className="accordion-body text-dark"
+                                  style={{
+                                    backgroundColor: "#fff9db",
+                                    borderBottomLeftRadius: "0.75rem",
+                                    borderBottomRightRadius: "0.75rem",
+                                  }}
+                                >
+                                  <ul className="mb-0 ps-3">
+                                    {cancellation_policy?.map((item, index) => {
+                                      const from = parseInt(
+                                        item.FromMinutes,
+                                        10
+                                      );
+                                      const to = parseInt(item.ToMinutes, 10);
+                                      const refund = item.RefundPercent;
+
+                                      let text = "";
+                                      if (to === 0) {
+                                        text = `Cancellations made ${
+                                          from / 60
+                                        } hours or more before the journey will be eligible for a ${refund}% refund.`;
+                                      } else {
+                                        text = `Cancellations made ${
+                                          from / 60
+                                        } to ${
+                                          to / 60
+                                        } hours before the journey will be eligible for a ${refund}% refund.`;
+                                      }
+                                      return <li key={index}>{text}</li>;
+                                    })}
+                                    <li>
+                                      Partial refunds depend on the operator’s
+                                      terms.
+                                    </li>
+                                    <li>
+                                      GST and convenience fees are
+                                      non-refundable.
+                                    </li>
+                                    <li>
+                                      For full terms, please refer to our{" "}
+                                      <a
+                                        href="#"
+                                        className="text-decoration-underline text-dark fw-bold"
+                                      >
+                                        cancellation policy page
+                                      </a>
+                                      .
+                                    </li>
+                                  </ul>
+                                </div>
+                              )}
+                              {activeTabName === "Amenities" && (
+                                <div>
+                                  <h5 className="fw-bold">Amenities</h5>
+                                  <div className="d-flex mt-3">
+                                    <div className="row w-100 align-items-center justify-content-start row-gap-3">
+                                      <div className="col-3 d-flex flex-row align-items-center gap-3">
+                                        <FaWifi size={25} /> <div>Wifi</div>
+                                      </div>
+                                      <div className="col-3 d-flex flex-row align-items-center gap-3">
+                                        <IoIosBatteryCharging size={25} />
+                                        <div>Charging Port</div>
+                                      </div>
+                                      <div className="col-3 d-flex flex-row align-items-center gap-3">
+                                        <BiBlanket size={25} />{" "}
+                                        <div>Blanket</div>
+                                      </div>
+                                      <div className="col-3 d-flex flex-row align-items-center gap-3">
+                                        <FaBottleWater size={25} />
+                                        <div>Water Bottle</div>
+                                      </div>
+                                      <div className="col-3 d-flex flex-row align-items-center gap-3">
+                                        <LuLampDesk size={25} />
+                                        <div>Reading Lamp</div>
+                                      </div>
+                                      <div className="col-3 d-flex flex-row align-items-center gap-3">
+                                        <FaTv size={25} /> <div>Movie</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              {activeTabName === "Pickup & Drops" && (
+                                <div className="pickup-drop">
+                                  <div className="pickupdiv">
+                                    <h5 className="fw-bolder">Pickup Points</h5>
+                                    <ul>
+                                      <li>03:00 - Greenland Chokdi</li>
+                                      <li>03:15 - Gondal Chowkdi</li>
+                                    </ul>
+                                  </div>
+                                  <div className="dropdiv">
+                                    <h5 className="fw-bolder">Drop Points</h5>
+                                    <ul>
+                                      <li>06:15 - Air Port, Porbandar</li>
+                                      <li>06:20 - Narshan Tekri</li>
+                                      <li>06:25 - Kamla Baug</li>
+                                      <li>06:30 - M.G Road</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Mobile Bus Card */}
+                        <div className="mob-bus-card">
+                          <div>
+                            <div
+                              className="bus-tag"
+                              style={{ backgroundColor: bus.tagColor }}
+                            >
+                              {bus.tag}
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div className="bus-times">
+                                <span
+                                  className="bus-time"
+                                  style={{ fontWeight: "bold" }}
+                                >
+                                  {bus.CityTime}
+                                </span>
+                                <span className="bus-arrow">—</span>
+                                <span className="bus-time">
+                                  {bus.ArrivalTime}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="bus-rating">
+                                  <span className="rating-star">
+                                    ★ {bus.rating}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div className="bus-duration">
+                                {calculateDuration(
+                                  bus.CityTime,
+                                  bus.ArrivalTime
+                                )}{" "}
+                                • {bus.EmptySeats}
+                              </div>
+                              <div>
+                                <div className="bus-price">
+                                  ₹{bus.AcSeatRate}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="bus-title">{bus.title}</div>
+                            <div className="bus-type">{bus.BusTypeName}</div>
+                            <div className="bus-type">
+                              {bus.ArrangementName}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              border: "1px solid #eee",
+                              marginTop: "1rem",
+                            }}
+                          />
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "row",
+                              alignItems: "center",
+                              width: "100%",
+                            }}
+                          >
+                            <div className="mob-bus-tabs-container">
+                              <div className="mob-bus-tabs">
+                                {[
+                                  "Amenities",
+                                  "Pickup & Drops",
+                                  "Policies",
+                                ].map((tab) => (
+                                  <button
+                                    key={tab}
+                                    className={`mob-tab-btn ${
+                                      activeTabIndex === index &&
+                                      activeTabName === tab
+                                        ? "active"
+                                        : ""
+                                    }`}
+                                    onClick={() => toggleTab(index, tab)}
+                                  >
+                                    {tab}
+                                  </button>
+                                ))}
+                              </div>
+                              <Divider
+                                orientation="vertical"
+                                flexItem
+                                sx={{ borderColor: "var(--color-orange)" }}
+                              />
+                              <Link
+                                to="/SeatSelcetion"
+                                state={{
+                                  bus: bus,
+                                  sittingType: bus.BusSeatType,
+                                }}
+                                className="mob-view-seats"
+                                onClick={() =>
+                                  getSeatArrangementBus(bus.ReferenceNumber)
+                                }
+                              >
+                                Select Seat
+                              </Link>
+                            </div>
+                          </div>
+                          {activeTabIndex === index && (
+                            <div className="tab-content">
+                              {activeTabName === "Policies" && (
+                                <div
+                                  className="accordion-body text-dark"
+                                  style={{
+                                    backgroundColor: "#fff9db",
+                                    borderBottomLeftRadius: "0.75rem",
+                                    borderBottomRightRadius: "0.75rem",
+                                  }}
+                                >
+                                  <ul className="mb-0 ps-3">
+                                    {cancellation_policy?.map((item, index) => {
+                                      const from = parseInt(
+                                        item.FromMinutes,
+                                        10
+                                      );
+                                      const to = parseInt(item.ToMinutes, 10);
+                                      const refund = item.RefundPercent;
+
+                                      let text = "";
+                                      if (to === 0) {
+                                        text = `Cancellations made ${
+                                          from / 60
+                                        } hours or more before the journey will be eligible for a ${refund}% refund.`;
+                                      } else {
+                                        text = `Cancellations made ${
+                                          from / 60
+                                        } to ${
+                                          to / 60
+                                        } hours before the journey will be eligible for a ${refund}% refund.`;
+                                      }
+                                      return <li key={index}>{text}</li>;
+                                    })}
+                                    <li>
+                                      Partial refunds depend on the operator’s
+                                      terms.
+                                    </li>
+                                    <li>
+                                      GST and convenience fees are
+                                      non-refundable.
+                                    </li>
+                                    <li>
+                                      For full terms, please refer to our{" "}
+                                      <a
+                                        href="#"
+                                        className="text-decoration-underline text-dark fw-bold"
+                                      >
+                                        cancellation policy pagesss
+                                      </a>
+                                      .
+                                    </li>
+                                  </ul>
+                                </div>
+                              )}
+                              {activeTabName === "Amenities" && (
+                                <div>
+                                  <h5 className="fw-bold">Amenities</h5>
+                                  <p>
+                                    WiFi, Charging Port, Blanket, Water Bottle
+                                  </p>
+                                </div>
+                              )}
+                              {activeTabName === "Pickup & Drops" && (
+                                <div className="mob-pickup-drop">
+                                  <div className="mobpickupdiv">
+                                    <h5 className="fw-bolder">Pickup Points</h5>
+                                    <ul style={{ paddingLeft: "0px" }}>
+                                      <li>03:00 - Greenland Chokdi</li>
+                                      <li>03:15 - Gondal Chowkdi</li>
+                                    </ul>
+                                  </div>
+                                  <div className="mobdropdiv">
+                                    <h5 className="fw-bolder">Drop Points</h5>
+                                    <ul style={{ paddingLeft: "0px" }}>
+                                      <li>06:15 - Air Port, Porbandar</li>
+                                      <li>06:20 - Narshan Tekri</li>
+                                      <li>06:25 - Kamla Baug</li>
+                                      <li>06:30 - M.G Road</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
-                      <Link to={"/SeatSelcetion"} className="view-seats">
-                        Select Seat
-                      </Link>
-                    </div>
-                    {activeTabIndex === index && (
-                      <div className="tab-content">
-                        {activeTabName === "Policies" && (
-                          <div
-                            className="accordion-body text-dark"
-                            style={{
-                              backgroundColor: "#fff9db",
-                              borderBottomLeftRadius: "0.75rem",
-                              borderBottomRightRadius: "0.75rem",
-                            }}
-                          >
-                            <ul className="mb-0 ps-3">
-                              <li>
-                                Cancellations made 4 to 12 hours before the
-                                journey will be eligible for a 25% refund.
-                              </li>
-                              <li>
-                                Cancellations made 12 to 24 hours before the
-                                journey will be eligible for a 50% refund.
-                              </li>
-                              <li>
-                                Partial refunds depend on the operator’s terms.
-                              </li>
-                              <li>
-                                GST and convenience fees are non-refundable.
-                              </li>
-                              <li>
-                                For full terms, please refer to our{" "}
-                                <a
-                                  href="#"
-                                  className="text-decoration-underline text-dark fw-bold"
-                                >
-                                  cancellation policy page
-                                </a>
-                                .
-                              </li>
-                            </ul>
-                          </div>
-                        )}
-                        {activeTabName === "Photos" && (
-                          <div>
-                            <h4>Bus Photos</h4>
-                            <p>[Image Placeholder]</p>
-                          </div>
-                        )}
-                        {activeTabName === "Amenities" && (
-                          <div>
-                            <h5 className="fw-bold">Amenities</h5>
-                            <p>WiFi, Charging Port, Blanket, Water Bottle</p>
-                          </div>
-                        )}
-                        {activeTabName === "Pickup & Drops" && (
-                          <div className="pickup-drop">
-                            <div className="pickupdiv">
-                              <h5 className="fw-bolder">Pickup Points</h5>
-                              <ul>
-                                <li>03:00 - Greenland Chokdi</li>
-                                <li>03:15 - Gondal Chowkdi</li>
-                              </ul>
-                            </div>
-                            <div className="dropdiv">
-                              <h5 className="fw-bolder">Drop Points</h5>
-                              <ul>
-                                <li>06:15 - Air Port, Porbandar</li>
-                                <li>06:20 - Narshan Tekri</li>
-                                <li>06:25 - Kamla Baug</li>
-                                <li>06:30 - M.G Road</li>
-                              </ul>
-                            </div>
-                          </div>
-                        )}
-                        {activeTabName === "Reviews" && (
-                          <div>
-                            <h4>Customer Reviews</h4>
-                            <p>
-                              ⭐ 4.7 based on 9 reviews — "Very clean and on
-                              time!"
-                            </p>
-                          </div>
-                        )}
+                    ))}
+
+                    {/* Show More Button */}
+                    {visibleCount < route_data?.length && (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          marginTop: "1rem",
+                          alignSelf: "center",
+                        }}
+                      >
+                        <button onClick={handleShowMore} className="view-seats">
+                          Show More
+                        </button>
                       </div>
                     )}
-                  </div>
-                ))}
+                  </>
+                )}
               </div>
             </>
           )}
 
-          {login == "true" ? (
+          {selectedtab === "flights" && (
             <>
-              <div className="recent-searches-wrapper">
-                <h2 className="recent_search_head">Recent Searches</h2>
-                {RecentSelection.length > 0 &&
-                RecentSelection.filter((item) =>
-                  selected == 1 ? item?.is_return == 1 : item?.is_return == 0
-                ).length > 0 ? (
-                  <Swiper
-                    modules={[Navigation]}
-                    navigation
-                    spaceBetween={20}
-                    slidesPerView={4}
-                    breakpoints={{
-                      320: { slidesPerView: 1 },
-                      768: { slidesPerView: 2 },
-                      1024: { slidesPerView: 3 },
-                      1540: { slidesPerView: 4 },
-                    }}
-                    className="recent-search-swiper"
-                  >
-                    {RecentSelection.filter((item) =>
+              {login == "true" ? (
+                <>
+                  <div className="recent-searches-wrapper">
+                    <h2 className="recent_search_head">Recent Searches</h2>
+                    {RecentSelection.length > 0 &&
+                    RecentSelection.filter((item) =>
                       selected == 1
                         ? item?.is_return == 1
                         : item?.is_return == 0
-                    )
-                      .slice(0, 5)
-                      .map((item, index) => (
-                        <SwiperSlide key={index}>
-                          <div
-                            className="search-card"
-                            onClick={() => handleRecentClick(item)}
-                          >
-                            <div className="icon-title">
-                              <div className="circlegol2">
-                                <BiSolidPlaneAlt
-                                  style={{
-                                    width: "40px",
-                                    height: "40px",
-                                    color: "#fff",
-                                  }}
-                                />
+                    ).length > 0 ? (
+                      <Swiper
+                        modules={[Navigation]}
+                        navigation
+                        spaceBetween={20}
+                        slidesPerView={4}
+                        breakpoints={{
+                          320: { slidesPerView: 1 },
+                          768: { slidesPerView: 2 },
+                          1024: { slidesPerView: 3 },
+                          1540: { slidesPerView: 4 },
+                        }}
+                        className="recent-search-swiper"
+                      >
+                        {RecentSelection.filter((item) =>
+                          selected == 1
+                            ? item?.is_return == 1
+                            : item?.is_return == 0
+                        )
+                          .slice(0, 5)
+                          .map((item, index) => (
+                            <SwiperSlide key={index}>
+                              <div
+                                className="search-card"
+                                onClick={() => handleRecentClick(item)}
+                              >
+                                <div className="icon-title">
+                                  <div className="circlegol2">
+                                    <BiSolidPlaneAlt
+                                      style={{
+                                        width: "40px",
+                                        height: "40px",
+                                        color: "#fff",
+                                      }}
+                                    />
+                                  </div>
+                                  <span>
+                                    {item.departure_city?.split(" (")[0]}{" "}
+                                    <b>›</b> {item.arrival_city?.split(" (")[0]}
+                                  </span>
+                                </div>
+
+                                <div className="recent_search_icon_flex">
+                                  {/* <img className="recent_search_icons" src={images.calender} alt="" /> */}
+                                  <div className="date">
+                                    {item.departure_date}{" "}
+                                    {item?.return_departure_date ? "›" : ""}{" "}
+                                    {item.return_departure_date}
+                                  </div>
+                                </div>
+
+                                <div className="recent_search_icon_flex">
+                                  {/* <img className="recent_search_icons" src={images.traveler} alt="" /> */}
+                                  <div className="desc">
+                                    {item.total_travelers} Traveler
+                                  </div>
+                                </div>
+
+                                <div className="recent_search_icon_flex">
+                                  {/* <img className="recent_search_icons" src={images.wmremovetransformed} alt="" /> */}
+                                  <div className="desc">
+                                    {item.is_return == 0
+                                      ? "One Way"
+                                      : "Round Trip"}
+                                  </div>
+                                </div>
+
+                                <div className="recent_search_icon_flex recent_search_icon_flex_last">
+                                  <img
+                                    className="recent_search_icons"
+                                    src={images.rupees}
+                                    alt=""
+                                  />
+                                  <div className="price"></div>
+                                  <b style={{ fontSize: "24px" }}>
+                                    {item.price}
+                                  </b>
+                                  {item.oldPrice && (
+                                    <span className="old-price">
+                                      Was {item.price}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <button className="search-btn">
+                                  <FaSearch className="recent_search_icon" />
+                                </button>
                               </div>
-                              <span>
-                                {item.departure_city?.split(" (")[0]} <b>›</b>{" "}
-                                {item.arrival_city?.split(" (")[0]}
-                              </span>
-                            </div>
-
-                            <div className="recent_search_icon_flex">
-                              {/* <img className="recent_search_icons" src={images.calender} alt="" /> */}
-                              <div className="date">
-                                {item.departure_date}{" "}
-                                {item?.return_departure_date ? "›" : ""}{" "}
-                                {item.return_departure_date}
-                              </div>
-                            </div>
-
-                            <div className="recent_search_icon_flex">
-                              {/* <img className="recent_search_icons" src={images.traveler} alt="" /> */}
-                              <div className="desc">
-                                {item.total_travelers} Traveler
-                              </div>
-                            </div>
-
-                            <div className="recent_search_icon_flex">
-                              {/* <img className="recent_search_icons" src={images.wmremovetransformed} alt="" /> */}
-                              <div className="desc">
-                                {item.is_return == 0 ? "One Way" : "Round Trip"}
-                              </div>
-                            </div>
-
-                            <div className="recent_search_icon_flex recent_search_icon_flex_last">
-                              <img
-                                className="recent_search_icons"
-                                src={images.rupees}
-                                alt=""
-                              />
-                              <div className="price"></div>
-                              <b style={{ fontSize: "24px" }}>{item.price}</b>
-                              {item.oldPrice && (
-                                <span className="old-price">
-                                  Was {item.price}
-                                </span>
-                              )}
-                            </div>
-
-                            <button className="search-btn">
-                              <FaSearch className="recent_search_icon" />
-                            </button>
-                          </div>
-                        </SwiperSlide>
-                      ))}
-                  </Swiper>
-                ) : (
-                  <div className="mt-4 text-center text-black fw-semibold">
-                    {selected == 1
-                      ? "Uh Oh! No Recent Searches Found for Return Trips."
-                      : "Uh Oh! No Recent Searches Found for One-Way Trips."}
+                            </SwiperSlide>
+                          ))}
+                      </Swiper>
+                    ) : (
+                      <div className="mt-4 text-center text-black fw-semibold">
+                        {selected == 1
+                          ? "Uh Oh! No Recent Searches Found for Return Trips."
+                          : "Uh Oh! No Recent Searches Found for One-Way Trips."}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              ) : (
+                <></>
+              )}
             </>
-          ) : (
-            <></>
           )}
         </>
       )}

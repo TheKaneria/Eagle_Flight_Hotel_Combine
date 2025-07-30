@@ -1,0 +1,40 @@
+.happywrapper {
+  height: 50vh;
+  background-image: url("../../Assets/bgbus.jpg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  justify-content: center;
+}
+
+.happymain {
+  display: flex;
+  width: 1240px;
+  margin: 0 auto;
+  height: 100%;
+  align-items: center;
+}
+
+.happysecbus {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.hjsecmah1 {
+  font-size: 80px;
+  font-weight: 900;
+  color: white;
+}
+
+@media screen and (max-width: 768px) {
+  .happywrapper {
+    padding: 1rem;
+    background-color: white;
+  }
+  .hjsecmah1 {
+    font-size: 25px;
+    font-weight: bold;
+  }
+}

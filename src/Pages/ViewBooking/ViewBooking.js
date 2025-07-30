@@ -16,11 +16,18 @@ import images from "../../Constants/images";
 import { WiSunrise } from "react-icons/wi";
 import { MdAirplaneTicket } from "react-icons/md";
 import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import axios from "axios";
 import { IoLogoWhatsapp } from "react-icons/io";
 import { SiGmail } from "react-icons/si";
-import { ACCEPT_HEADER, ticketcurl } from "../../Utils/Constant";
+import {
+  ACCEPT_HEADER,
+  bookseatdetails,
+  FetchTicketPrintData,
+  ticketcurl,
+  verifyCall,
+} from "../../Utils/Constant";
+import { useBusContext } from "../../Context/bus_context";
 
 const ViewBooking = () => {
   const location = useLocation();
@@ -30,6 +37,32 @@ const ViewBooking = () => {
   const invoiceRef = useRef(null);
   const [data2, setData2] = useState(null);
   const [loading2, setLoading2] = useState(false);
+  const [isPastDeparture, setIsPastDeparture] = useState(false);
+
+  console.log("view booking ma data", data);
+
+  useEffect(() => {
+    if (data?.departure_date && data?.departure_time) {
+      const departureDateTime = new Date(
+        `${data.departure_date}T${data.departure_time}`
+      );
+      const now = new Date();
+
+      if (departureDateTime < now) {
+        setIsPastDeparture(true); // hide button
+      }
+    }
+  }, [data]);
+
+  const {
+    selectedTabMainHome,
+    book_seat_details_data,
+    GetBookSeatDetailsApi,
+    book_seat_details_data_loading,
+    fetchTicketPrintDataApi,
+    fetch_ticket_print_loading,
+    fetch_ticket_print_data,
+  } = useBusContext();
 
   useEffect(() => {
     window.scroll(0, 0);
@@ -37,6 +70,22 @@ const ViewBooking = () => {
       BookingDetails();
     }
   }, []);
+
+  useEffect(() => {
+    if (book_seat_details_data.length <= 0) {
+      fetchseatDetails();
+    }
+  }, []);
+
+  const fetchseatDetails = async () => {
+    const formdata = new FormData();
+    formdata.append("type", "POST");
+    formdata.append("url", bookseatdetails);
+    formdata.append("verifyCall", verifyCall);
+    await formdata.append("pnrNo", data?.PNRNO);
+
+    await GetBookSeatDetailsApi(formdata);
+  };
 
   const toggleview = () => {
     setViewopen(!viewopen);
@@ -107,12 +156,8 @@ const ViewBooking = () => {
     pdf.save("Ticket.pdf");
   };
 
-  console.log("DATOOO", data2);
-
   const isLocalhost = window.location.hostname === "localhost";
-
   const proxy = isLocalhost ? "https://cors-anywhere.herokuapp.com/" : "";
-
   const API_KEY =
     "NTMzNDUwMDpBSVJJUSBURVNUIEFQSToxODkxOTMwMDM1OTk2OmpTMm0vUU1HVmQvelovZi81dFdwTEE9PQ==";
 
@@ -146,6 +191,76 @@ const ViewBooking = () => {
     }
   };
 
+  const BusTicketPrintData = async () => {
+    const formdata = new FormData();
+    formdata.append("type", "POST");
+    formdata.append("url", FetchTicketPrintData);
+    formdata.append("verifyCall", verifyCall);
+    formdata.append("pnrNo", data?.PNRNO);
+
+    const fetchedData = await fetchTicketPrintDataApi(formdata);
+
+    if (!fetchedData || fetchedData.length === 0) {
+      alert("No ticket data found.");
+      return;
+    }
+
+    const ticketDataArray = Array.isArray(fetchedData)
+      ? fetchedData
+      : fetchedData?.data || [];
+
+    ticketDataArray.forEach((item, index) => {
+      const doc = new jsPDF();
+      let yPosition = 10;
+
+      doc.addImage(require("../../Assets/logo.png"), "PNG", 10, 10, 30, 30);
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const textWidth =
+        (doc.getStringUnitWidth("Eagle Travels") * doc.internal.getFontSize()) /
+        doc.internal.scaleFactor;
+      const textX = (pageWidth - textWidth) / 2;
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("Eagle Travels", textX, 25);
+
+      yPosition = 70;
+      doc.setFontSize(12);
+
+      const drawRow = (label, value) => {
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor("#ff690f");
+        doc.text(`${label}:`, 10, yPosition);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${value}`, 60, yPosition);
+        yPosition += 10;
+      };
+
+      drawRow("Passenger Name", `${item.PassangerName || "N/A"}`);
+      drawRow("Mobile No.", `${item.PhoneNo || "N/A"}`);
+      drawRow("PNR NO", item.PNRNO || "N/A");
+      drawRow(
+        "Booking Date",
+        `${item.BookingDate || "N/A"} ${item.DayName || ""}`
+      );
+      drawRow("City", `${item.FromCity || "N/A"} to ${item.ToCity || "N/A"}`);
+      drawRow("PickUp Point", item.PickUpName || "N/A");
+      drawRow("Seat No", item.SeatNo || "N/A");
+      drawRow("Total Seats", item.TotalSeat || "N/A");
+      drawRow("Journey Date", item.JourneyDate || "N/A");
+      drawRow("Departure Time", item.DepartureTime || "N/A");
+      drawRow("Reporting Time", item.ReportingTime || "N/A");
+      drawRow("Ticket No", item.TicketNo || "N/A");
+      drawRow("Total", item.TotalAmount || "N/A");
+
+      const pdfData = doc.output("blob");
+      const pdfUrl = URL.createObjectURL(pdfData);
+      const newTab = window.open(pdfUrl, "_blank");
+      if (newTab) newTab.focus();
+    });
+  };
+
   return (
     <div>
       <Helmet>
@@ -154,860 +269,1009 @@ const ViewBooking = () => {
       <PathHero name={"View Booking"} />
       <section>
         <div className="container-fluid p-3" ref={invoiceRef}>
-          <div className="row">
-            {/* Left Side */}
-            <div className="col-lg-8 col-md-7 col-12 mb-3">
-              <div className="d-flex flex-column flex-lg-row justify-content-start justify-content-lg-between align-items-center">
-                <div className="fs-6 text-muted fw-bold align-self-start align-self-lg-center">
-                  BOOKING ID -{" "}
-                  {data.get_con === 0 ? (
-                    <>{data2?.booking_id ? data2?.booking_id : "N/A"}</>
+          {selectedTabMainHome === "buses" ? (
+            <div className="row align-items-center justify-content-center">
+              <div className="row align-items-center justify-content-center p-3 viewBooking_Cont">
+                <div className="col-md-12 justify-content-center">
+                  {book_seat_details_data_loading ? (
+                    <div
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginTop: "2rem",
+                      }}
+                    >
+                      <div className="loader">
+                        <div className="spinner"></div>
+                        <p className="loading-text">Loading...</p>
+                      </div>
+                    </div>
                   ) : (
-                    <>{data?.booking_id ? data?.booking_id : "N/A"}</>
-                  )}{" "}
-                </div>
-                {data?.get_con === 0 && (
-                  <div className="d-flex align-self-start align-self-lg-center align-items-center gap-3">
-                    {/* <BsCalendarDate size={18} /> */}
-                    {data2?.booking_date && (
-                      <>
-                        <div className="text-muted fw-bold">
-                          BOOKING DATE -{" "}
-                        </div>
-
-                        {data2?.booking_date && (
+                    <>
+                      {data.length <= 0 ? (
+                        <p className="viewbookingnodata">No Data Found...</p>
+                      ) : (
+                        <>
+                          {/* {data?.map((item, index) => { */}
+                          {/* return ( */}
                           <div>
-                            {moment(data2.booking_date)
-                              .format("DD MMM'YY hh:mm a")
-                              .toLowerCase()}
+                            <div className="d-flex align-items-center mb-3">
+                              <div className="fw-bold viewbktitle">
+                                Phone No :
+                              </div>
+                              <div className="viewbkitm">{data?.phone}</div>
+                            </div>
+                            <div className="d-flex align-items-center mb-3">
+                              <div className="fw-bold viewbktitle">Email :</div>
+                              <div
+                                className="viewbkitm"
+                                style={{ textTransform: "none" }}
+                              >
+                                {data?.email}
+                              </div>
+                            </div>
+                            <div className="d-flex align-items-center mb-3">
+                              <div className="fw-bold viewbktitle">
+                                PNR NO :
+                              </div>
+                              <div className="viewbkitm">{data?.PNRNO}</div>
+                            </div>
+
+                            <div className="d-flex align-items-center mb-3">
+                              <div className="fw-bold viewbktitle">
+                                Journey Date :
+                              </div>
+                              <div className="viewbkitm">
+                                {data.departure_date}
+                              </div>
+                            </div>
+                            {data?.child?.length > 0 && (
+                              <div className="passenger-table-section mt-4">
+                                <h5
+                                  className="fw-bold mb-2"
+                                  style={{ color: "var(--color-orange)" }}
+                                >
+                                  Passenger Details
+                                </h5>
+
+                                <div className="table-responsive-scroll">
+                                  <table className="table table-bordered">
+                                    <thead>
+                                      <tr>
+                                        <th>Name</th>
+                                        <th>Mobile Number</th>
+                                        <th>Seat No</th>
+                                        <th>Gender</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {data.child.map((passenger, idx) => {
+                                        const [seatNo, genderCode] =
+                                          passenger.seatNames?.split(",") || [];
+                                        const gender =
+                                          genderCode === "F"
+                                            ? "Female"
+                                            : "Male";
+
+                                        return (
+                                          <tr key={idx}>
+                                            <td>{passenger.paxName}</td>
+                                            <td>{passenger.mobileNo}</td>
+                                            <td>{seatNo}</td>
+                                            <td>{gender}</td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </>
-                    )}
+                          {/* ); */}
+                          {/* })} */}
+                          {!isPastDeparture && (
+                            <div className="Print_batan_div">
+                              <div
+                                className="print_batan"
+                                onClick={() => BusTicketPrintData()}
+                                style={{
+                                  cursor: fetch_ticket_print_loading
+                                    ? "not-allowed"
+                                    : "default",
+                                  opacity: fetch_ticket_print_loading ? 0.5 : 1,
+                                }}
+                              >
+                                {fetch_ticket_print_loading
+                                  ? "Loading..."
+                                  : "Print"}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+                {/* <div className="col-md-5">
+                  <div className="blob-mask">
+                  <img
+                    src={images.viewticketsvg}
+                    className="viewbookingsvgillus"
+                    alt=""
+                  />
                   </div>
-                )}
-                {/* <div>
+                </div> */}
+              </div>
+            </div>
+          ) : (
+            <div className="row">
+              {/* Left Side */}
+              <div className="col-lg-8 col-md-7 col-12 mb-3">
+                <div className="d-flex flex-column flex-lg-row justify-content-start justify-content-lg-between align-items-center">
+                  <div className="fs-6 text-muted fw-bold align-self-start align-self-lg-center">
+                    BOOKING ID -{" "}
+                    {data.get_con === 0 ? (
+                      <>{data2?.booking_id ? data2?.booking_id : "N/A"}</>
+                    ) : (
+                      <>{data?.booking_id ? data?.booking_id : "N/A"}</>
+                    )}{" "}
+                  </div>
+                  {data?.get_con === 0 && (
+                    <div className="d-flex align-self-start align-self-lg-center align-items-center gap-3">
+                      {/* <BsCalendarDate size={18} /> */}
+                      {data2?.booking_date && (
+                        <>
+                          <div className="text-muted fw-bold">
+                            BOOKING DATE -{" "}
+                          </div>
+
+                          {data2?.booking_date && (
+                            <div>
+                              {moment(data2.booking_date)
+                                .format("DD MMM'YY hh:mm a")
+                                .toLowerCase()}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {/* <div>
                       {moment(data2?.booking_date, "DD MMM YYYY HH:mm")
                         .format("DD MMM'YY hh:mm a")
                         .toLowerCase()}
                     </div> */}
-              </div>
-
-              <div className={`cardd p-3 shadow-sm classokkaro`}>
-                <div className="divviewopen" onClick={toggleview}>
-                  <h4 className="d-flex gap-2">
-                    <strong>
-                      {data?.departure_city} → {data?.arrival_city}
-                    </strong>
-                  </h4>
-                  <div>
-                    {viewopen ? (
-                      <CiCircleChevUp size={25} />
-                    ) : (
-                      <CiCircleChevDown size={25} />
-                    )}
-                  </div>
                 </div>
-                {viewopen && (
-                  <>
-                    <div className="d-flex flex-column flex-lg-row align-items-center mt-5 mt-lg-4">
-                      <div className="d-flex justify-content-between plannicompany">
-                        <div>
-                          {(() => {
-                            const airline = data.airline_name;
 
-                            return airline === "IndiGo Airlines" ||
-                              airline === "IndiGo" ? (
-                              <img
-                                src={images.IndiGoAirlines_logo}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : airline === "Neos" ? (
-                              <img
-                                src={images.neoslogo}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : airline === "SpiceJet" ? (
-                              <img
-                                src={images.spicejet}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : airline === "Air India" ? (
-                              <img
-                                src={images.airindialogo}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : airline === "Akasa Air" ? (
-                              <img
-                                src={images.akasalogo}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : airline === "Etihad" ? (
-                              <img
-                                src={images.etihadlogo}
-                                style={{
-                                  backgroundColor: "#fffbdb",
-                                  padding: "5px",
-                                  borderRadius: "5px",
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                                // className="airline_logo"
-                              />
-                            ) : airline === "Vistara" ? (
-                              <img
-                                src={images.vistaralogo}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : airline === "AirAsia X" ? (
-                              <img
-                                src={images.airasiax}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : airline === "AirAsia" ? (
-                              <img
-                                src={images.airasia}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : airline === "Azul" ? (
-                              <img
-                                src={images.azul}
-                                // className="airline_logo"
-                                style={{
-                                  width: "80px",
-                                  height: "50px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : (
-                              <IoAirplaneSharp size={40} color="white" />
-                            );
-                          })()}
-                        </div>
-                        <div className="d-flex flex-column gap-1">
-                          <div className="text-muted">{data.airline_name}</div>
-                          <div className="text-muted">{data.airline_code}</div>
-                        </div>
-                      </div>
+                <div className={`cardd p-3 shadow-sm classokkaro`}>
+                  <div className="divviewopen" onClick={toggleview}>
+                    <h4 className="d-flex gap-2">
+                      <strong>
+                        {data?.departure_city} → {data?.arrival_city}
+                      </strong>
+                    </h4>
+                    <div>
+                      {viewopen ? (
+                        <CiCircleChevUp size={25} />
+                      ) : (
+                        <CiCircleChevDown size={25} />
+                      )}
+                    </div>
+                  </div>
+                  {viewopen && (
+                    <>
+                      <div className="d-flex flex-column flex-lg-row align-items-center mt-5 mt-lg-4">
+                        <div className="d-flex justify-content-between plannicompany">
+                          <div>
+                            {(() => {
+                              const airline = data.airline_name;
 
-                      <div className="d-flex align-items-center mt-3 w-100 justify-content-between justify-content-lg-around">
-                        <div className="d-flex flex-column text-center text-md-start">
-                          <div className="fw-bold fs-6 fs-lg-4 ">
-                            {data.departure_city}
+                              return airline === "IndiGo Airlines" ||
+                                airline === "IndiGo" ? (
+                                <img
+                                  src={images.IndiGoAirlines_logo}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : airline === "Neos" ? (
+                                <img
+                                  src={images.neoslogo}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : airline === "SpiceJet" ? (
+                                <img
+                                  src={images.spicejet}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : airline === "Air India" ? (
+                                <img
+                                  src={images.airindialogo}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : airline === "Akasa Air" ? (
+                                <img
+                                  src={images.akasalogo}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : airline === "Etihad" ? (
+                                <img
+                                  src={images.etihadlogo}
+                                  style={{
+                                    backgroundColor: "#fffbdb",
+                                    padding: "5px",
+                                    borderRadius: "5px",
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                  // className="airline_logo"
+                                />
+                              ) : airline === "Vistara" ? (
+                                <img
+                                  src={images.vistaralogo}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : airline === "AirAsia X" ? (
+                                <img
+                                  src={images.airasiax}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : airline === "AirAsia" ? (
+                                <img
+                                  src={images.airasia}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : airline === "Azul" ? (
+                                <img
+                                  src={images.azul}
+                                  // className="airline_logo"
+                                  style={{
+                                    width: "80px",
+                                    height: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : (
+                                <IoAirplaneSharp size={40} color="white" />
+                              );
+                            })()}
                           </div>
-                          <div className="d-flex align-items-center flex-column flex-lg-row">
-                            {/* <WiSunrise
+                          <div className="d-flex flex-column gap-1">
+                            <div className="text-muted">
+                              {data.airline_name}
+                            </div>
+                            <div className="text-muted">
+                              {data.airline_code}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="d-flex align-items-center mt-3 w-100 justify-content-between justify-content-lg-around">
+                          <div className="d-flex flex-column text-center text-md-start">
+                            <div className="fw-bold fs-6 fs-lg-4 ">
+                              {data.departure_city}
+                            </div>
+                            <div className="d-flex align-items-center flex-column flex-lg-row">
+                              {/* <WiSunrise
                               size={20}
                               color="orange"
                               className="d-none d-lg-block"
                             /> */}
-                            <div className="fw-bold">
-                              {moment(data.departure_time, "HH:mm:ss").format(
-                                "HH:mm"
-                              )}
-                              ,
-                            </div>
-                            <div className="fw-bold">
-                              {moment(data.departure_date).format("DD MMM'YY")}
-                            </div>
-                          </div>
-                          <div
-                            className=""
-                            style={{
-                              borderBottom: "1px dashed gray",
-                              marginTop: "10px",
-                              width: "100%",
-                            }}
-                          />
-                          <div className="d-flex flex-column mt-2">
-                            <div className="text-muted">
-                              {data?.departure_airport_name}
-                            </div>
-                            {data?.departure_terminal_no && (
-                              <div className="text-muted">
-                                Terminal - {data?.departure_terminal_no}
+                              <div className="fw-bold">
+                                {moment(data.departure_time, "HH:mm:ss").format(
+                                  "HH:mm"
+                                )}
+                                ,
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="durationdiv">
-                          <div>
-                            <img
-                              src={images.planecompleted}
-                              style={{
-                                height: "40px",
-                                width: "50px",
-                                objectFit: "fill",
-                              }}
-                            />
-                          </div>
-                          <div className="d-flex w-100 align-items-center">
-                            <GoDotFill size={25} color="gray" />
+                              <div className="fw-bold">
+                                {moment(data.departure_date).format(
+                                  "DD MMM'YY"
+                                )}
+                              </div>
+                            </div>
                             <div
+                              className=""
                               style={{
-                                border: "1px dashed gray",
+                                borderBottom: "1px dashed gray",
+                                marginTop: "10px",
                                 width: "100%",
                               }}
                             />
-                            <GoDotFill size={25} color="gray" />
-                          </div>
-
-                          <p className="small">
-                            {" "}
-                            {(() => {
-                              const departureDateTime = moment(
-                                `${data.departure_date} ${data.departure_time}`,
-                                "YYYY-MM-DD HH:mm:ss"
-                              );
-                              const arrivalDateTime = moment(
-                                `${data.arrival_date} ${data.arrival_time}`,
-                                "YYYY-MM-DD HH:mm:ss"
-                              );
-
-                              const duration = moment.duration(
-                                arrivalDateTime.diff(departureDateTime)
-                              );
-                              const hours = duration.hours();
-                              const minutes = duration.minutes();
-
-                              return `${hours}h ${minutes}m`;
-                            })()}
-                          </p>
-                        </div>
-                        <div className="d-flex flex-column text-center text-md-start">
-                          <div className="fw-bold fs-6 fs-lg-4">
-                            {data.arrival_city}
-                          </div>
-                          <div className="d-flex align-items-center flex-column flex-lg-row">
-                            <div className="fw-bold">
-                              {moment(data.arrival_time, "HH:mm:ss").format(
-                                "HH:mm"
+                            <div className="d-flex flex-column mt-2">
+                              <div className="text-muted">
+                                {data?.departure_airport_name}
+                              </div>
+                              {data?.departure_terminal_no && (
+                                <div className="text-muted">
+                                  Terminal - {data?.departure_terminal_no}
+                                </div>
                               )}
-                              ,
-                            </div>
-                            <div className="fw-bold">
-                              {moment(data.arrival_date).format("DD MMM'YY")}
                             </div>
                           </div>
-                          <div
-                            className=""
-                            style={{
-                              borderBottom: "1px dashed gray",
-                              marginTop: "10px",
-                              width: "100%",
-                            }}
-                          />
-                          <div className="d-flex flex-column mt-2">
-                            <div className="text-muted">
-                              {data?.arrival_airport_name}
-                            </div>
-                            {data?.arrival_terminal_no && (
-                              <div className="text-muted">
-                                Terminal - {data?.arrival_terminal_no}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="row mt-5">
-                      <div className="col-lg-4 d-flex align-items-center gap-2">
-                        <MdAirplaneTicket size={20} color="#000" />
-                        <div className="fw-bold text-muted">Base Fare</div>
-                      </div>
-
-                      <div className="col-lg-4 d-flex align-items-center gap-2">
-                        <MdAirplaneTicket size={20} color="#000" />
-                        <div className="text-muted fw-bold">Economy</div>
-                      </div>
-                      <div className="col-lg-3"></div>
-                      <div className="col-lg-3"></div>
-                    </div>
-                    <div className="d-flex flex-column row flex-md-row mt-2 gap-2">
-                      <div className="d-flex col-lg-4 align-items-center gap-2">
-                        <MdLuggage size={20} color="#000" />
-                        <div className="fw-bold text-muted">Check In</div>
-                        <div className="text-danger">
-                          - Details Not Available
-                        </div>
-                      </div>
-                      <div className="d-flex col-lg-4 align-items-center gap-2">
-                        <MdAirplaneTicket size={20} color="#000" />
-                        <div>Carry On </div>
-                        <div className="text-danger">
-                          - Details Not Available
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="passengerDiv my-4">
-                      <div className="table-responsive border rounded">
-                        <table className="table mb-0">
-                          <thead className="table-light table-light2">
-                            <tr>
-                              <th>Traveller</th>
-                              <th>PNR/E-Ticket Number</th>
-                              <th className="text-center">Seat</th>
-                              <th className="text-center">Meal</th>
-                              <th className="text-center">Excess Baggage</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {data?.child?.map((passenger, index) => (
-                              <tr key={index}>
-                                <td className="fw-semibold">
-                                  {passenger.first_name} {passenger.last_name}
-                                </td>
-                                <td className="text-uppercase fw-semibold">
-                                  {data?.get_con === 0 ? (
-                                    <>{data2?.pnr ? data2.pnr : "N/A"}</>
-                                  ) : (
-                                    <>{`N/A`}</>
-                                  )}
-                                </td>
-                                <td className="text-center">-</td>
-                                <td className="text-center">-</td>
-                                <td className="text-center">-</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {data?.is_return == 1 && (
-                <>
-                  <div className={`cardd p-3 shadow-sm mt-3`}>
-                    <div className="divviewopen" onClick={toggleview2}>
-                      <h4 className="d-flex gap-2">
-                        <strong>
-                          {data?.return_departure_city} →{" "}
-                          {data?.return_arrival_city}
-                        </strong>
-                      </h4>
-                      <div>
-                        {viewopen2 ? (
-                          <CiCircleChevUp size={25} />
-                        ) : (
-                          <CiCircleChevDown size={25} />
-                        )}
-                      </div>
-                    </div>
-                    {viewopen2 && (
-                      <>
-                        <div className="d-flex flex-column flex-lg-row align-items-center mt-5 mt-lg-4">
-                          <div className="d-flex justify-content-between plannicompany">
+                          <div className="durationdiv">
                             <div>
-                              {(() => {
-                                const airline = data.airline_name;
-
-                                return airline === "IndiGo Airlines" ||
-                                  airline === "IndiGo" ? (
-                                  <img
-                                    src={images.IndiGoAirlines_logo}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                  />
-                                ) : airline === "Neos" ? (
-                                  <img
-                                    src={images.neoslogo}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                  />
-                                ) : airline === "SpiceJet" ? (
-                                  <img
-                                    src={images.spicejet}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "fill",
-                                    }}
-                                  />
-                                ) : airline === "Air India" ? (
-                                  <img
-                                    src={images.airindialogo}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                  />
-                                ) : airline === "Akasa Air" ? (
-                                  <img
-                                    src={images.akasalogo}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                  />
-                                ) : airline === "Etihad" ? (
-                                  <img
-                                    src={images.etihadlogo}
-                                    style={{
-                                      backgroundColor: "#fffbdb",
-                                      padding: "5px",
-                                      borderRadius: "5px",
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                    // className="airline_logo"
-                                  />
-                                ) : airline === "Vistara" ? (
-                                  <img
-                                    src={images.vistaralogo}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                  />
-                                ) : airline === "AirAsia X" ? (
-                                  <img
-                                    src={images.airasiax}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                  />
-                                ) : airline === "AirAsia" ? (
-                                  <img
-                                    src={images.airasia}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                  />
-                                ) : airline === "Azul" ? (
-                                  <img
-                                    src={images.azul}
-                                    // className="airline_logo"
-                                    style={{
-                                      width: "80px",
-                                      height: "50px",
-                                      objectFit: "contain",
-                                    }}
-                                  />
-                                ) : (
-                                  <IoAirplaneSharp size={40} color="white" />
-                                );
-                              })()}
+                              <img
+                                src={images.planecompleted}
+                                style={{
+                                  height: "40px",
+                                  width: "50px",
+                                  objectFit: "fill",
+                                }}
+                              />
                             </div>
-                            <div className="d-flex flex-column gap-1">
-                              <div className="text-muted">
-                                {data.return_airline_name}
+                            <div className="d-flex w-100 align-items-center">
+                              <GoDotFill size={25} color="gray" />
+                              <div
+                                style={{
+                                  border: "1px dashed gray",
+                                  width: "100%",
+                                }}
+                              />
+                              <GoDotFill size={25} color="gray" />
+                            </div>
+
+                            <p className="small">
+                              {" "}
+                              {(() => {
+                                const departureDateTime = moment(
+                                  `${data.departure_date} ${data.departure_time}`,
+                                  "YYYY-MM-DD HH:mm:ss"
+                                );
+                                const arrivalDateTime = moment(
+                                  `${data.arrival_date} ${data.arrival_time}`,
+                                  "YYYY-MM-DD HH:mm:ss"
+                                );
+
+                                const duration = moment.duration(
+                                  arrivalDateTime.diff(departureDateTime)
+                                );
+                                const hours = duration.hours();
+                                const minutes = duration.minutes();
+
+                                return `${hours}h ${minutes}m`;
+                              })()}
+                            </p>
+                          </div>
+                          <div className="d-flex flex-column text-center text-md-start">
+                            <div className="fw-bold fs-6 fs-lg-4">
+                              {data.arrival_city}
+                            </div>
+                            <div className="d-flex align-items-center flex-column flex-lg-row">
+                              <div className="fw-bold">
+                                {moment(data.arrival_time, "HH:mm:ss").format(
+                                  "HH:mm"
+                                )}
+                                ,
                               </div>
-                              <div className="text-muted">
-                                {data?.return_airline_code === "undefined"
-                                  ? "N/A"
-                                  : data?.return_airline_code}
+                              <div className="fw-bold">
+                                {moment(data.arrival_date).format("DD MMM'YY")}
                               </div>
+                            </div>
+                            <div
+                              className=""
+                              style={{
+                                borderBottom: "1px dashed gray",
+                                marginTop: "10px",
+                                width: "100%",
+                              }}
+                            />
+                            <div className="d-flex flex-column mt-2">
+                              <div className="text-muted">
+                                {data?.arrival_airport_name}
+                              </div>
+                              {data?.arrival_terminal_no && (
+                                <div className="text-muted">
+                                  Terminal - {data?.arrival_terminal_no}
+                                </div>
+                              )}
                             </div>
                           </div>
+                        </div>
+                      </div>
+                      <div className="row mt-5">
+                        <div className="col-lg-4 d-flex align-items-center gap-2">
+                          <MdAirplaneTicket size={20} color="#000" />
+                          <div className="fw-bold text-muted">Base Fare</div>
+                        </div>
 
-                          <div className="d-flex align-items-center mt-3 w-100 justify-content-between justify-content-lg-around">
-                            <div className="d-flex flex-column text-center text-md-start">
-                              <div className="fw-bold fs-6 fs-lg-4 ">
-                                {data.return_departure_city}
+                        <div className="col-lg-4 d-flex align-items-center gap-2">
+                          <MdAirplaneTicket size={20} color="#000" />
+                          <div className="text-muted fw-bold">Economy</div>
+                        </div>
+                        <div className="col-lg-3"></div>
+                        <div className="col-lg-3"></div>
+                      </div>
+                      <div className="d-flex flex-column row flex-md-row mt-2 gap-2">
+                        <div className="d-flex col-lg-4 align-items-center gap-2">
+                          <MdLuggage size={20} color="#000" />
+                          <div className="fw-bold text-muted">Check In</div>
+                          <div className="text-danger">
+                            - Details Not Available
+                          </div>
+                        </div>
+                        <div className="d-flex col-lg-4 align-items-center gap-2">
+                          <MdAirplaneTicket size={20} color="#000" />
+                          <div>Carry On </div>
+                          <div className="text-danger">
+                            - Details Not Available
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="passengerDiv my-4">
+                        <div className="table-responsive border rounded">
+                          <table className="table mb-0">
+                            <thead className="table-light table-light2">
+                              <tr>
+                                <th>Traveller</th>
+                                <th>PNR/E-Ticket Number</th>
+                                <th className="text-center">Seat</th>
+                                <th className="text-center">Meal</th>
+                                <th className="text-center">Excess Baggage</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data?.child?.map((passenger, index) => (
+                                <tr key={index}>
+                                  <td className="fw-semibold">
+                                    {passenger.first_name} {passenger.last_name}
+                                  </td>
+                                  <td className="text-uppercase fw-semibold">
+                                    {data?.get_con === 0 ? (
+                                      <>{data2?.pnr ? data2.pnr : "N/A"}</>
+                                    ) : (
+                                      <>{`N/A`}</>
+                                    )}
+                                  </td>
+                                  <td className="text-center">-</td>
+                                  <td className="text-center">-</td>
+                                  <td className="text-center">-</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {data?.is_return == 1 && (
+                  <>
+                    <div className={`cardd p-3 shadow-sm mt-3`}>
+                      <div className="divviewopen" onClick={toggleview2}>
+                        <h4 className="d-flex gap-2">
+                          <strong>
+                            {data?.return_departure_city} →{" "}
+                            {data?.return_arrival_city}
+                          </strong>
+                        </h4>
+                        <div>
+                          {viewopen2 ? (
+                            <CiCircleChevUp size={25} />
+                          ) : (
+                            <CiCircleChevDown size={25} />
+                          )}
+                        </div>
+                      </div>
+                      {viewopen2 && (
+                        <>
+                          <div className="d-flex flex-column flex-lg-row align-items-center mt-5 mt-lg-4">
+                            <div className="d-flex justify-content-between plannicompany">
+                              <div>
+                                {(() => {
+                                  const airline = data.airline_name;
+
+                                  return airline === "IndiGo Airlines" ||
+                                    airline === "IndiGo" ? (
+                                    <img
+                                      src={images.IndiGoAirlines_logo}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                    />
+                                  ) : airline === "Neos" ? (
+                                    <img
+                                      src={images.neoslogo}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                    />
+                                  ) : airline === "SpiceJet" ? (
+                                    <img
+                                      src={images.spicejet}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "fill",
+                                      }}
+                                    />
+                                  ) : airline === "Air India" ? (
+                                    <img
+                                      src={images.airindialogo}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                    />
+                                  ) : airline === "Akasa Air" ? (
+                                    <img
+                                      src={images.akasalogo}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                    />
+                                  ) : airline === "Etihad" ? (
+                                    <img
+                                      src={images.etihadlogo}
+                                      style={{
+                                        backgroundColor: "#fffbdb",
+                                        padding: "5px",
+                                        borderRadius: "5px",
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                      // className="airline_logo"
+                                    />
+                                  ) : airline === "Vistara" ? (
+                                    <img
+                                      src={images.vistaralogo}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                    />
+                                  ) : airline === "AirAsia X" ? (
+                                    <img
+                                      src={images.airasiax}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                    />
+                                  ) : airline === "AirAsia" ? (
+                                    <img
+                                      src={images.airasia}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                    />
+                                  ) : airline === "Azul" ? (
+                                    <img
+                                      src={images.azul}
+                                      // className="airline_logo"
+                                      style={{
+                                        width: "80px",
+                                        height: "50px",
+                                        objectFit: "contain",
+                                      }}
+                                    />
+                                  ) : (
+                                    <IoAirplaneSharp size={40} color="white" />
+                                  );
+                                })()}
                               </div>
-                              <div className="d-flex align-items-center flex-column flex-lg-row">
-                                {/* <WiSunrise
+                              <div className="d-flex flex-column gap-1">
+                                <div className="text-muted">
+                                  {data.return_airline_name}
+                                </div>
+                                <div className="text-muted">
+                                  {data?.return_airline_code === "undefined"
+                                    ? "N/A"
+                                    : data?.return_airline_code}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="d-flex align-items-center mt-3 w-100 justify-content-between justify-content-lg-around">
+                              <div className="d-flex flex-column text-center text-md-start">
+                                <div className="fw-bold fs-6 fs-lg-4 ">
+                                  {data.return_departure_city}
+                                </div>
+                                <div className="d-flex align-items-center flex-column flex-lg-row">
+                                  {/* <WiSunrise
                                   size={20}
                                   color="orange"
                                   className="d-none d-lg-block"
                                 /> */}
-                                <div className="fw-bold">
-                                  {moment(
-                                    data.return_departure_time,
-                                    "HH:mm:ss"
-                                  ).format("HH:mm")}
-                                  ,
-                                </div>
-                                <div className="fw-bold">
-                                  {moment(data.return_departure_date).format(
-                                    "DD MMM'YY"
-                                  )}
-                                </div>
-                              </div>
-                              <div
-                                className=""
-                                style={{
-                                  borderBottom: "1px dashed gray",
-                                  marginTop: "10px",
-                                  width: "100%",
-                                }}
-                              />
-                              <div className="d-flex flex-column mt-2">
-                                <div className="text-muted">
-                                  {data?.departure_airport_name}
-                                </div>
-                                {data?.departure_terminal_no && (
-                                  <div className="text-muted">
-                                    Terminal - {data?.departure_terminal_no}
+                                  <div className="fw-bold">
+                                    {moment(
+                                      data.return_departure_time,
+                                      "HH:mm:ss"
+                                    ).format("HH:mm")}
+                                    ,
                                   </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="durationdiv">
-                              <div>
-                                <img
-                                  src={images.planecompleted}
-                                  style={{
-                                    height: "40px",
-                                    width: "50px",
-                                    objectFit: "fill",
-                                  }}
-                                />
-                              </div>
-                              <div className="d-flex w-100 align-items-center">
-                                <GoDotFill size={25} color="gray" />
+                                  <div className="fw-bold">
+                                    {moment(data.return_departure_date).format(
+                                      "DD MMM'YY"
+                                    )}
+                                  </div>
+                                </div>
                                 <div
+                                  className=""
                                   style={{
-                                    border: "1px dashed gray",
+                                    borderBottom: "1px dashed gray",
+                                    marginTop: "10px",
                                     width: "100%",
                                   }}
                                 />
-                                <GoDotFill size={25} color="gray" />
-                              </div>
-
-                              <p className="small">
-                                {" "}
-                                {(() => {
-                                  const departureDateTime = moment(
-                                    `${data.return_departure_date} ${data.return_departure_time}`,
-                                    "YYYY-MM-DD HH:mm:ss"
-                                  );
-                                  const arrivalDateTime = moment(
-                                    `${data.return_arrival_date} ${data.return_arrival_time}`,
-                                    "YYYY-MM-DD HH:mm:ss"
-                                  );
-
-                                  const duration = moment.duration(
-                                    arrivalDateTime.diff(departureDateTime)
-                                  );
-                                  const hours = duration.hours();
-                                  const minutes = duration.minutes();
-
-                                  return `${hours}h ${minutes}m`;
-                                })()}
-                              </p>
-                            </div>
-                            <div className="d-flex flex-column text-center text-md-start">
-                              <div className="fw-bold fs-6 fs-lg-4">
-                                {data.return_arrival_city}
-                              </div>
-                              <div className="d-flex align-items-center flex-column flex-lg-row">
-                                <WiSunrise
-                                  size={20}
-                                  color="orange"
-                                  className="d-none d-lg-block"
-                                />
-                                <div className="fw-bold">
-                                  {moment(
-                                    data.return_arrival_time,
-                                    "HH:mm:ss"
-                                  ).format("HH:mm")}
-                                  ,
-                                </div>
-                                <div className="fw-bold">
-                                  {moment(data.return_arrival_date).format(
-                                    "DD MMM'YY"
+                                <div className="d-flex flex-column mt-2">
+                                  <div className="text-muted">
+                                    {data?.departure_airport_name}
+                                  </div>
+                                  {data?.departure_terminal_no && (
+                                    <div className="text-muted">
+                                      Terminal - {data?.departure_terminal_no}
+                                    </div>
                                   )}
                                 </div>
                               </div>
-                              <div
-                                className=""
-                                style={{
-                                  borderBottom: "1px dashed gray",
-                                  marginTop: "10px",
-                                  width: "100%",
-                                }}
-                              />
-                              <div className="d-flex flex-column mt-2">
-                                <div className="text-muted">
-                                  {data?.arrival_airport_name}
+                              <div className="durationdiv">
+                                <div>
+                                  <img
+                                    src={images.planecompleted}
+                                    style={{
+                                      height: "40px",
+                                      width: "50px",
+                                      objectFit: "fill",
+                                    }}
+                                  />
                                 </div>
-                                {data?.arrival_terminal_no && (
-                                  <div className="text-muted">
-                                    Terminal - {data?.arrival_terminal_no}
+                                <div className="d-flex w-100 align-items-center">
+                                  <GoDotFill size={25} color="gray" />
+                                  <div
+                                    style={{
+                                      border: "1px dashed gray",
+                                      width: "100%",
+                                    }}
+                                  />
+                                  <GoDotFill size={25} color="gray" />
+                                </div>
+
+                                <p className="small">
+                                  {" "}
+                                  {(() => {
+                                    const departureDateTime = moment(
+                                      `${data.return_departure_date} ${data.return_departure_time}`,
+                                      "YYYY-MM-DD HH:mm:ss"
+                                    );
+                                    const arrivalDateTime = moment(
+                                      `${data.return_arrival_date} ${data.return_arrival_time}`,
+                                      "YYYY-MM-DD HH:mm:ss"
+                                    );
+
+                                    const duration = moment.duration(
+                                      arrivalDateTime.diff(departureDateTime)
+                                    );
+                                    const hours = duration.hours();
+                                    const minutes = duration.minutes();
+
+                                    return `${hours}h ${minutes}m`;
+                                  })()}
+                                </p>
+                              </div>
+                              <div className="d-flex flex-column text-center text-md-start">
+                                <div className="fw-bold fs-6 fs-lg-4">
+                                  {data.return_arrival_city}
+                                </div>
+                                <div className="d-flex align-items-center flex-column flex-lg-row">
+                                  <WiSunrise
+                                    size={20}
+                                    color="orange"
+                                    className="d-none d-lg-block"
+                                  />
+                                  <div className="fw-bold">
+                                    {moment(
+                                      data.return_arrival_time,
+                                      "HH:mm:ss"
+                                    ).format("HH:mm")}
+                                    ,
                                   </div>
-                                )}
+                                  <div className="fw-bold">
+                                    {moment(data.return_arrival_date).format(
+                                      "DD MMM'YY"
+                                    )}
+                                  </div>
+                                </div>
+                                <div
+                                  className=""
+                                  style={{
+                                    borderBottom: "1px dashed gray",
+                                    marginTop: "10px",
+                                    width: "100%",
+                                  }}
+                                />
+                                <div className="d-flex flex-column mt-2">
+                                  <div className="text-muted">
+                                    {data?.arrival_airport_name}
+                                  </div>
+                                  {data?.arrival_terminal_no && (
+                                    <div className="text-muted">
+                                      Terminal - {data?.arrival_terminal_no}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="row mt-3">
-                          <div className="col-lg-3 d-flex align-items-center gap-2">
-                            <MdAirplaneTicket size={20} color="#000" />
-                            <div className="fw-bold text-muted">Base Fare</div>
+                          <div className="row mt-3">
+                            <div className="col-lg-3 d-flex align-items-center gap-2">
+                              <MdAirplaneTicket size={20} color="#000" />
+                              <div className="fw-bold text-muted">
+                                Base Fare
+                              </div>
+                            </div>
+                            <div className="col-lg-3 d-flex align-items-center gap-2">
+                              <MdAirplaneTicket size={20} color="#000" />
+                              <div className="text-muted fw-bold">Economy</div>
+                            </div>
+                            <div className="col-lg-3"></div>
+                            <div className="col-lg-3"></div>
                           </div>
-                          <div className="col-lg-3 d-flex align-items-center gap-2">
-                            <MdAirplaneTicket size={20} color="#000" />
-                            <div className="text-muted fw-bold">Economy</div>
-                          </div>
-                          <div className="col-lg-3"></div>
-                          <div className="col-lg-3"></div>
-                        </div>
-                        <div className="d-flex flex-column flex-md-row mt-2 gap-2">
-                          <div className="d-flex align-items-center gap-2">
-                            <MdLuggage size={20} color="#000" />
-                            <div className="fw-bold text-muted">Check In</div>
-                            <div className="text-danger">
-                              - Details Not Available
+                          <div className="d-flex flex-column flex-md-row mt-2 gap-2">
+                            <div className="d-flex align-items-center gap-2">
+                              <MdLuggage size={20} color="#000" />
+                              <div className="fw-bold text-muted">Check In</div>
+                              <div className="text-danger">
+                                - Details Not Available
+                              </div>
+                            </div>
+                            <div className="d-flex align-items-center gap-2">
+                              <MdAirplaneTicket size={20} color="#000" />
+                              <div>Carry On </div>
+                              <div className="text-danger">
+                                - Details Not Available
+                              </div>
                             </div>
                           </div>
-                          <div className="d-flex align-items-center gap-2">
-                            <MdAirplaneTicket size={20} color="#000" />
-                            <div>Carry On </div>
-                            <div className="text-danger">
-                              - Details Not Available
-                            </div>
-                          </div>
-                        </div>
 
-                        <div className="passengerDiv my-4">
-                          <div className="table-responsive border rounded">
-                            <table className="table mb-0">
-                              <thead className="table-light table-light2">
-                                <tr>
-                                  <th>Traveller</th>
-                                  <th>PNR/E-Ticket Number</th>
-                                  <th className="text-center">Seat</th>
-                                  <th className="text-center">Meal</th>
-                                  <th className="text-center">
-                                    Excess Baggage
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {data?.child?.map((passenger, index) => (
-                                  <tr key={index}>
-                                    <td className="fw-semibold">
-                                      {passenger.first_name}{" "}
-                                      {passenger.last_name}
-                                    </td>
-                                    <td className="text-uppercase fw-semibold">
-                                      {passenger.pnr ? passenger.pnr : "N/A"}
-                                    </td>
-                                    <td className="text-center">-</td>
-                                    <td className="text-center">-</td>
-                                    <td className="text-center">-</td>
+                          <div className="passengerDiv my-4">
+                            <div className="table-responsive border rounded">
+                              <table className="table mb-0">
+                                <thead className="table-light table-light2">
+                                  <tr>
+                                    <th>Traveller</th>
+                                    <th>PNR/E-Ticket Number</th>
+                                    <th className="text-center">Seat</th>
+                                    <th className="text-center">Meal</th>
+                                    <th className="text-center">
+                                      Excess Baggage
+                                    </th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                </thead>
+                                <tbody>
+                                  {data?.child?.map((passenger, index) => (
+                                    <tr key={index}>
+                                      <td className="fw-semibold">
+                                        {passenger.first_name}{" "}
+                                        {passenger.last_name}
+                                      </td>
+                                      <td className="text-uppercase fw-semibold">
+                                        {passenger.pnr ? passenger.pnr : "N/A"}
+                                      </td>
+                                      <td className="text-center">-</td>
+                                      <td className="text-center">-</td>
+                                      <td className="text-center">-</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
-                      </>
-                    )}
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                <div className="cardd my-4">
+                  <div className="info-box p-3 p-md-4 rounded shadow-sm">
+                    <h6 className="fw-bold text-uppercase text-warning mb-3">
+                      <i className="me-2 border-start border-4 border-warning ps-2">
+                        Important Information
+                      </i>
+                    </h6>
+                    <ul className="list-unstyled mb-0">
+                      <li className="mb-3">
+                        <span className="fw-semibold">
+                          🟤 Check travel guidelines and baggage information
+                          below:
+                        </span>
+                        <br />
+                        Carry no more than 1 check-in baggage and 1 hand baggage
+                        per passenger. If violated, airline may levy extra
+                        charges.
+                      </li>
+                      <li className="mb-3">
+                        <span className="fw-semibold">
+                          🟤 Unaccompanied Minors Travelling:
+                        </span>
+                        <br />
+                        An unaccompanied minor usually refers to a child
+                        traveling without an adult aged 18 or older. Please
+                        check with the airline for their rules and regulations
+                        regarding unaccompanied minors, as these can differ
+                        between airlines.
+                      </li>
+                      <li>
+                        <span className="fw-semibold">
+                          🟤 Valid ID proof needed:
+                        </span>
+                        <br />
+                        Carry a valid photo identification proof (Driver
+                        Licence, Aadhar Card, Pan Card or any other Government
+                        recognised photo identification)
+                      </li>
+                    </ul>
                   </div>
-                </>
-              )}
-
-              <div className="cardd my-4">
-                <div className="info-box p-3 p-md-4 rounded shadow-sm">
-                  <h6 className="fw-bold text-uppercase text-warning mb-3">
-                    <i className="me-2 border-start border-4 border-warning ps-2">
-                      Important Information
-                    </i>
-                  </h6>
-                  <ul className="list-unstyled mb-0">
-                    <li className="mb-3">
-                      <span className="fw-semibold">
-                        🟤 Check travel guidelines and baggage information
-                        below:
-                      </span>
-                      <br />
-                      Carry no more than 1 check-in baggage and 1 hand baggage
-                      per passenger. If violated, airline may levy extra
-                      charges.
-                    </li>
-                    <li className="mb-3">
-                      <span className="fw-semibold">
-                        🟤 Unaccompanied Minors Travelling:
-                      </span>
-                      <br />
-                      An unaccompanied minor usually refers to a child traveling
-                      without an adult aged 18 or older. Please check with the
-                      airline for their rules and regulations regarding
-                      unaccompanied minors, as these can differ between
-                      airlines.
-                    </li>
-                    <li>
-                      <span className="fw-semibold">
-                        🟤 Valid ID proof needed:
-                      </span>
-                      <br />
-                      Carry a valid photo identification proof (Driver Licence,
-                      Aadhar Card, Pan Card or any other Government recognised
-                      photo identification)
-                    </li>
-                  </ul>
                 </div>
-              </div>
 
-              <div className="cardd mt-3 shadow-sm p-3">
-                <h6>
-                  <strong className="fs-5 fs-lg-4 fw-bold">
-                    CONTACT INFORMATION
-                  </strong>
-                </h6>
-                <div>
-                  Our Airline or our service experts might connect with you on{" "}
-                  below contact details
-                </div>
-                <div className="mt-4 d-flex align-items-start gap-2">
-                  <FaUser size={19} color="gray" />
-                  <p className="">
-                    <strong>
-                      {data?.child[0]?.first_name} {data?.child[0]?.last_name}
+                <div className="cardd mt-3 shadow-sm p-3">
+                  <h6>
+                    <strong className="fs-5 fs-lg-4 fw-bold">
+                      CONTACT INFORMATION
                     </strong>
-                  </p>
+                  </h6>
+                  <div>
+                    Our Airline or our service experts might connect with you on{" "}
+                    below contact details
+                  </div>
+                  <div className="mt-4 d-flex align-items-start gap-2">
+                    <FaUser size={19} color="gray" />
+                    <p className="">
+                      <strong>
+                        {data?.child[0]?.first_name} {data?.child[0]?.last_name}
+                      </strong>
+                    </p>
+                  </div>
+                  <div className="d-flex align-items-start gap-2">
+                    <IoMdMail size={19} color="gray" />
+                    <p className="small text-dark">
+                      {data?.child[0]?.email ? data?.child[0]?.email : "N/A"}
+                    </p>
+                  </div>
+                  <div className="d-flex align-items-start gap-2 mt-2">
+                    <FaPhoneAlt size={19} color="gray" />
+                    <p className="small text-dark">
+                      {data?.child[0]?.phone_no
+                        ? data?.child[0]?.phone_no
+                        : "N/A"}
+                    </p>
+                  </div>
                 </div>
-                <div className="d-flex align-items-start gap-2">
-                  <IoMdMail size={19} color="gray" />
-                  <p className="small text-dark">
-                    {data?.child[0]?.email ? data?.child[0]?.email : "N/A"}
-                  </p>
+
+                <div className="cardd mt-3 shadow-sm p-3">
+                  <div>
+                    <strong className="fs-5 fs-lg-4 fw-bold">
+                      CANCELLATION
+                    </strong>
+                  </div>
+                  <div>
+                    Your Flight has already departed, online cancellation is not
+                    allowed
+                  </div>
                 </div>
-                <div className="d-flex align-items-start gap-2 mt-2">
-                  <FaPhoneAlt size={19} color="gray" />
-                  <p className="small text-dark">
-                    {data?.child[0]?.phone_no
-                      ? data?.child[0]?.phone_no
-                      : "N/A"}
-                  </p>
-                </div>
+
+                {/* <hr /> */}
               </div>
 
-              <div className="cardd mt-3 shadow-sm p-3">
-                <div>
-                  <strong className="fs-5 fs-lg-4 fw-bold">CANCELLATION</strong>
+              {/* Right Side */}
+              <div className="col-lg-4 col-md-5 col-12">
+                <div className="cardd p-3 shadow-sm mb-3">
+                  <h6>
+                    <strong>Ticket Invoice</strong>
+                  </h6>
+                  <button
+                    className="btn btn-outline-primary btn-sm mt-2"
+                    onClick={handleDownload}
+                  >
+                    Download Ticket
+                  </button>
                 </div>
-                <div>
-                  Your Flight has already departed, online cancellation is not
-                  allowed
-                </div>
-              </div>
 
-              {/* <hr /> */}
-            </div>
+                <div className="cardd p-3 shadow-sm mb-3">
+                  <h6>
+                    <strong>PRICING BREAKUP</strong>
+                  </h6>
+                  <div className="d-flex justify-content-between">
+                    <span>Base Fare</span>
+                    <span>₹ {data?.base_fare}</span>
+                  </div>
+                  <div className="d-flex justify-content-between text-dark">
+                    <span>Service Fee</span>
+                    <span>- ₹ {data?.service_fees}</span>
+                  </div>
+                  <div className="d-flex justify-content-between text-dark">
+                    <span>Texes & Others</span>
+                    <span>- ₹ {data?.taxes_and_others}</span>
+                  </div>
+                  <hr />
+                  <div className="d-flex justify-content-between">
+                    <strong>Total cost</strong>
+                    <strong className="text-success">
+                      ₹ {data?.total_amount}
+                    </strong>
+                  </div>
+                </div>
 
-            {/* Right Side */}
-            <div className="col-lg-4 col-md-5 col-12">
-              <div className="cardd p-3 shadow-sm mb-3">
-                <h6>
-                  <strong>Ticket Invoice</strong>
-                </h6>
-                <button
-                  className="btn btn-outline-primary btn-sm mt-2"
-                  onClick={handleDownload}
-                >
-                  Download Ticket
-                </button>
-              </div>
-
-              <div className="cardd p-3 shadow-sm mb-3">
-                <h6>
-                  <strong>PRICING BREAKUP</strong>
-                </h6>
-                <div className="d-flex justify-content-between">
-                  <span>Base Fare</span>
-                  <span>₹ {data?.base_fare}</span>
-                </div>
-                <div className="d-flex justify-content-between text-dark">
-                  <span>Service Fee</span>
-                  <span>- ₹ {data?.service_fees}</span>
-                </div>
-                <div className="d-flex justify-content-between text-dark">
-                  <span>Texes & Others</span>
-                  <span>- ₹ {data?.taxes_and_others}</span>
-                </div>
-                <hr />
-                <div className="d-flex justify-content-between">
-                  <strong>Total cost</strong>
-                  <strong className="text-success">
-                    ₹ {data?.total_amount}
-                  </strong>
-                </div>
-              </div>
-
-              <div className="cardd p-3 shadow-sm ">
-                <div className="d-flex justify-content-between align-items-center ">
-                  <div className="fw-bold">Share On</div>
-                  <div className="d-flex gap-4">
-                    <div className="whatsappiocnn">
-                      <IoLogoWhatsapp size={25} color="green" />
-                    </div>
-                    <div className="whatsappiocnn">
-                      <SiGmail size={25} color="gray" />
+                <div className="cardd p-3 shadow-sm ">
+                  <div className="d-flex justify-content-between align-items-center ">
+                    <div className="fw-bold">Share On</div>
+                    <div className="d-flex gap-4">
+                      <div className="whatsappiocnn">
+                        <IoLogoWhatsapp size={25} color="green" />
+                      </div>
+                      <div className="whatsappiocnn">
+                        <SiGmail size={25} color="gray" />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
     </div>

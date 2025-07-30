@@ -1,109 +1,626 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./SeatSelection.css";
 import { PiSteeringWheelFill } from "react-icons/pi";
+import { toast } from "react-toastify";
+import TextField from "@mui/material/TextField";
+import { FaMale, FaFemale } from "react-icons/fa";
+import Divider from "@mui/material/Divider";
+import Accordion from "@mui/material/Accordion";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import Avatar from "@mui/material/Avatar";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import { IoPerson } from "react-icons/io5";
+import { FaAngleDown } from "react-icons/fa6";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Tooltip from "@mui/material/Tooltip";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  bookseat,
+  seararrangementdetails,
+  verifyCall,
+} from "../../Utils/Constant";
+import { useBusContext } from "../../Context/bus_context";
+
+const seatTypes = [
+  {
+    label: "Available",
+    seaterClass: "seat-icon availablee",
+    sleeperClass: "seat-icon sleeper availablee",
+  },
+  {
+    label: "Available only for male passenger",
+    seaterClass: "seat-icon male",
+    sleeperClass: "seat-icon sleeper male",
+  },
+  {
+    label: "Already booked",
+    seaterClass: "seat-icon booked",
+    sleeperClass: "seat-icon sleeper booked",
+  },
+  {
+    label: "Selected by you",
+    seaterClass: "seat-icon selectedd",
+    sleeperClass: "seat-icon sleeper selectedd",
+  },
+  {
+    label: "Available only for female passenger",
+    seaterClass: "seat-icon female",
+    sleeperClass: "seat-icon sleeper female",
+  },
+  {
+    label: "Booked by female passenger",
+    seaterClass: "seat-icon female-booked",
+    sleeperClass: "seat-icon sleeper female-booked",
+  },
+  {
+    label: "Booked by male passenger",
+    seaterClass: "seat-icon male-booked",
+    sleeperClass: "seat-icon sleeper male-booked",
+  },
+];
 
 const SeatSelection = () => {
-  const [selectedBoarding, setSelectedBoarding] = useState("Indira Circle");
-  const [selectedDropping, setSelectedDropping] = useState(
-    "Shree Ramkrupa Travels, Narsang Tekri"
+  const [selectedBoarding, setSelectedBoarding] = useState("");
+  const [selectedDropping, setSelectedDropping] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [passengerDetails, setPassengerDetails] = useState([]);
+  const [selectedSeats, setSelectedSeats] = useState([]);
+  const [userr, setUser] = useState("");
+  const [login, SetLogin] = useState("");
+
+  const navigate = useNavigate();
+
+  const {
+    GetSeatArrangementDetail,
+    seats_data,
+    GetBookSeatApi,
+    book_seat_data,
+    book_seat_data_loading,
+  } = useBusContext();
+
+  const location = useLocation();
+  const [bussitting, setbussitting] = useState(
+    location.state?.sittingType || ""
+  );
+  const [getBus, setBus] = useState(location.state?.bus || "");
+  const [getBusReferenceNo, setBusReferenceNo] = useState(
+    location.state?.bus?.ReferenceNumber || ""
   );
 
-  const boardingPoints = [
-    {
-      time: "17:00",
-      name: "Indira Circle",
-      address: "Raiya Telephone Exchange Opp. Water Tank 150 FT Ring Road",
-    },
+  useEffect(() => {
+    var islogin = localStorage.getItem("is_login");
+    SetLogin(islogin);
+    var user = localStorage.getItem("is_user");
+    setUser(JSON.parse(user));
+  }, []);
 
-    {
-      time: "17:05",
-      name: "Big Bazar",
-      address: "Relince MAIL,150ft Ring Road",
-    },
-    { time: "17:10", name: "Gondal Chokdi", address: "Gondal Chokdi,Rajkot" },
-    { time: "17:12", name: "Toyota Show Room ,Kalpvan,Rajkot", address: "" },
-    {
-      time: "17:25",
-      name: "Maruti Travels,End Of Bridge(Shapar)",
-      address: "",
-    },
-  ];
+  const handleConfirm = async () => {
+    const token = JSON.parse(localStorage.getItem("is_token"));
+    if (!selectedBoarding || !selectedDropping) {
+      alert("Select boarding & dropping");
+      return;
+    }
 
-  const droppingPoints = [
-    "Kutiyana-Bypass",
-    "Ranavav Bypass",
-    "AirPort, Porbandar",
-    "Shree Ramkrupa Travels, Narsang Tekri",
-    "Jalaram Colony",
-    "Kaveri Hotel",
-    "Vadilal Ice Cream",
-    "Shree Ramkrupa Travels, Opp Sadhna Studio SVP Road Porbandar",
-  ];
+    const formdata = new FormData();
+    formdata.append("type", "POST");
+    formdata.append("url", bookseat);
+    formdata.append("verifyCall", verifyCall); // Compulsory
 
-  const rows = 6;
-  const columns = 4;
-  const seatsPerColumn = 9;
-  const price = "₹300";
+    // Compulsory parameters from seats_data and state
+    if (seats_data.length > 0) {
+      const seatData = seats_data[0];
+      formdata.append(
+        "referenceNumber",
+        seatData.ReferenceNumber || getBusReferenceNo
+      ); // Compulsory
+    }
+    formdata.append(
+      "passengerName",
+      passengerDetails.length > 0
+        ? passengerDetails[0].name || "Passenger 1"
+        : "Passenger 1"
+    ); // Default if no details
+    const seatNames =
+      bussitting === 1
+        ? selected.map((seat) => {
+            const passenger = passengerDetails.find(
+              (p) => p.seatNumber === seat.number
+            );
+            const genderCode = passenger?.gender || seat.userGender || "";
+            return `${seat.number},${
+              genderCode === "male" ? "M" : genderCode === "female" ? "F" : ""
+            }`;
+          })
+        : selectedSeats.map((seat) => {
+            const passenger = passengerDetails.find(
+              (p) => p.seatNumber === seat.seatNo
+            );
+            const genderCode = passenger?.gender || seat.userGender || "";
+            return `${seat.seatNo},${
+              genderCode === "male" ? "M" : genderCode === "female" ? "F" : ""
+            }`;
+          });
+    formdata.append("seatNames", seatNames.join("|")); // Compulsory, in the format "1,M|2,F|3,M"
+
+    formdata.append("email", email ? email : userr?.email); // Compulsory
+    formdata.append("phone", phone); // Compulsory
+
+    // Boarding and dropping point IDs
+    const boardingPoint = boardingPoints.find(
+      (p) => p.name === selectedBoarding
+    );
+    const droppingPoint = droppingPoints.find(
+      (p) => p.name === selectedDropping
+    );
+    formdata.append("pickUpID", boardingPoint ? boardingPoint.id : ""); // Compulsory
+    formdata.append("dropID", droppingPoint ? droppingPoint.id : ""); // Compulsory
+
+    // Pricing and passenger count
+    formdata.append("payableAmount", totalPrice); // Compulsory
+    formdata.append(
+      "totalPassengers",
+      bussitting === 1 ? selected.length : selectedSeats.length
+    ); // Compulsory
+
+    // Seat details (only seat numbers)
+    formdata.append(
+      "seatDetails",
+      seatNames.map((s) => s.split(",")[0]).join(",")
+    ); // Compulsory
+
+    // PaxDetails structure
+    const paxDetails =
+      bussitting === 1
+        ? selected.map((seat, index) => {
+            const passenger =
+              passengerDetails.find((p) => p.seatNumber === seat.number) || {};
+            return {
+              seatName: seat.number,
+              paxName: passenger.name || `Passenger ${index + 1}`,
+              mobileNo: phone,
+              paxAge: passenger.age || "25",
+              baseFare: seat.price || seats_data[0]?.SeatRate || 0,
+            };
+          })
+        : selectedSeats.map((seat, index) => {
+            const passenger =
+              passengerDetails.find((p) => p.seatNumber === seat.seatNo) || {};
+            return {
+              seatName: seat.seatNo,
+              paxName: passenger.name || `Passenger ${index + 1}`,
+              mobileNo: phone,
+              paxAge: passenger.age || "25",
+              baseFare: seat.price || seats_data[0]?.SeatRate || 0,
+            };
+          });
+
+    paxDetails.forEach((pax, index) => {
+      formdata.append(`paxDetails[${index}][seatName]`, pax.seatName);
+      formdata.append(`paxDetails[${index}][paxName]`, pax.paxName);
+      formdata.append(`paxDetails[${index}][mobileNo]`, pax.mobileNo);
+      formdata.append(`paxDetails[${index}][paxAge]`, pax.paxAge);
+      formdata.append(`paxDetails[${index}][baseFare]`, pax.baseFare);
+    });
+
+    // Optional timestamp (based on current date and time: 04:03 PM IST, July 23, 2025)
+    formdata.append("bookingTime", "2025-07-23 16:03 IST"); // Add if required by API
+    formdata.append(
+      "arrival_date",
+      getBus?.ApproxArrival
+        ? getBus.ApproxArrival.split(" ")[0].split("-").reverse().join("-")
+        : ""
+    );
+    formdata.append(
+      "arrival_time",
+      (() => {
+        const t = getBus?.ArrivalTime;
+        if (!t) return "";
+        const [time, meridiem] = t.split(" ");
+        let [h, m] = time.split(":");
+        if (meridiem === "PM" && h !== "12") h = String(+h + 12);
+        if (meridiem === "AM" && h === "12") h = "00";
+        return `${h.padStart(2, "0")}:${m}`;
+      })()
+    );
+    formdata.append(
+      "departure_date",
+      getBus?.BookingDate
+        ? getBus.BookingDate.split("-").reverse().join("-")
+        : ""
+    );
+    formdata.append("arrival_city", getBus?.ToCityName);
+    formdata.append("departure_city", getBus?.FromCityName);
+    formdata.append(
+      "departure_time",
+      (() => {
+        const t = getBus?.CityTime;
+        if (!t) return "";
+        const [time, meridiem] = t.split(" ");
+        let [h, m] = time.split(":");
+        if (meridiem === "PM" && h !== "12") h = String(+h + 12);
+        if (meridiem === "AM" && h === "12") h = "00";
+        return `${h.padStart(2, "0")}:${m}`;
+      })()
+    );
+
+    setLoading(true);
+    try {
+      console.log("Calling booking API...");
+      const data = await GetBookSeatApi(formdata, token);
+      console.log("Booking response:", data);
+      if (data) {
+        console.log("Booking successful:", data);
+        setIsExpanded(false);
+        // window.location.reload();
+        navigate("/dashboard");
+        window.scrollTo(0, 0);
+      } else {
+        console.log("No data received for booking");
+      }
+    } catch (error) {
+      console.error("Error booking seat:", error);
+      toast.error("Failed to confirm booking. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const savedReference = localStorage.getItem("busReference");
+      const referenceNumber =
+        getBus?.ReferenceNumber || savedReference || "default-reference";
+      if (referenceNumber) {
+        localStorage.setItem("busReference", referenceNumber);
+        setLoading(true);
+        try {
+          await getSeatArrangementBus(referenceNumber);
+        } catch (error) {
+          console.error("Error fetching seat arrangement:", error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [getBus]);
+
+  useEffect(() => {
+    const newLowerSeats = generateSeatsSleeper("LB");
+    const newUpperSeats = generateSeatsSleeper("UB");
+    if (JSON.stringify(lowerSeats) !== JSON.stringify(newLowerSeats))
+      setLowerSeats(newLowerSeats);
+    if (JSON.stringify(upperSeats) !== JSON.stringify(newUpperSeats))
+      setUpperSeats(newUpperSeats);
+  }, [seats_data]);
+
+  const getSeatArrangementBus = async (referenceno) => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", seararrangementdetails);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("referenceNumber", referenceno);
+
+    const data = await GetSeatArrangementDetail(formdata);
+    if (data) {
+      console.log("bus seat arrangement data", data);
+    } else {
+      console.log("No data received for referenceNumber:", referenceno);
+    }
+  };
+
+  // Parse boarding points dynamically
+  const parseBoardingPoints = (boardingPointsStr) => {
+    if (!boardingPointsStr) return [];
+    return boardingPointsStr.split("#").flatMap((group) => {
+      const [id, name, time, address] = group.split("|");
+      return { id, name, time, address };
+    });
+  };
+
+  // Parse dropping points dynamically
+  const parseDroppingPoints = (droppingPointsStr) => {
+    if (!droppingPointsStr) return [];
+    return droppingPointsStr.split("#").flatMap((group) => {
+      const [id, name, time] = group.split("|");
+      return { id, name, time };
+    });
+  };
+
+  const [boardingPoints, setBoardingPoints] = useState(
+    seats_data.length > 0
+      ? parseBoardingPoints(seats_data[0].BoardingPoints)
+      : []
+  );
+  const [droppingPoints, setDroppingPoints] = useState(
+    seats_data.length > 0
+      ? parseDroppingPoints(seats_data[0].DroppingPoints)
+      : []
+  );
+
+  useEffect(() => {
+    if (seats_data.length > 0) {
+      setBoardingPoints(parseBoardingPoints(seats_data[0].BoardingPoints));
+      setDroppingPoints(parseDroppingPoints(seats_data[0].DroppingPoints));
+    }
+  }, [seats_data]);
+
+  const rows = 4;
+  const columns = 6;
 
   const generateSeats = () => {
-    const seats = [];
-    let seatNumber = 1;
-    for (let i = 0; i < rows; i++) {
-      const row = [];
-      for (let j = 0; j < columns; j++) {
-        row.push({
-          number: seatNumber++,
-          isBooked: false,
-          price: 300,
-        });
+    if (!seats_data || !Array.isArray(seats_data)) return [];
+
+    const seatsByRow = {};
+    seats_data.forEach((seat) => {
+      if (!seat.SeatNo.startsWith("T")) {
+        if (!seatsByRow[seat.Row]) seatsByRow[seat.Row] = [];
+        seatsByRow[seat.Row].push(seat);
       }
-      seats.push(row);
-    }
+    });
+
+    const seats = Object.keys(seatsByRow).map((row) => {
+      const sortedSeats = seatsByRow[row].sort((a, b) => a.Column - b.Column);
+      const leftPair = sortedSeats.slice(0, 2);
+      const rightPair = sortedSeats.slice(2, 4);
+
+      return [
+        leftPair.map((seat) => {
+          let status = "available";
+          let gender = null;
+
+          if (seat.Available === "N") {
+            status = "already booked";
+            if (seat.IsLadiesSeat === "Y") {
+              status = "female-booked";
+              gender = "female";
+            } else if (seat.BookedByGender === "male") {
+              status = "male-booked";
+              gender = "male";
+            }
+          } else if (seat.Available === "Y" && seat.IsLadiesSeat === "Y") {
+            status = "available only for female passenger";
+          }
+
+          return {
+            number: seat.SeatNo,
+            price: seat.SeatRate || 705,
+            status,
+            gender,
+          };
+        }),
+        rightPair.map((seat) => {
+          let status = "available";
+          let gender = null;
+
+          if (seat.Available === "N") {
+            status = "already booked";
+            if (seat.IsLadiesSeat === "Y") {
+              status = "female-booked";
+              gender = "female";
+            } else if (seat.BookedByGender === "male") {
+              status = "male-booked";
+              gender = "male";
+            }
+          } else if (seat.Available === "Y" && seat.IsLadiesSeat === "Y") {
+            status = "available only for female passenger";
+          }
+
+          return {
+            number: seat.SeatNo,
+            price: seat.SeatRate || 705,
+            status,
+            gender,
+          };
+        }),
+      ];
+    });
+
     return seats;
   };
 
   const [seats, setSeats] = useState(generateSeats());
   const [selected, setSelected] = useState([]);
+  const [totalPrice, setTotalPrice] = useState(0);
 
-  const toggleSeat = (rowIdx, colIdx) => {
-    const seat = seats[rowIdx][colIdx];
-    if (seat.isBooked) return;
+  useEffect(() => {
+    const newSeats = generateSeats();
+    if (JSON.stringify(seats) !== JSON.stringify(newSeats)) {
+      setSeats(newSeats);
+    }
+    // Initialize passenger details when seats are selected
+    if ((bussitting === 1 || bussitting === "1") && selected.length > 0) {
+      const newPassengerDetails = selected.map((seat) => ({
+        seatNumber: seat.number,
+        name: "",
+        age: "",
+        gender: seat.userGender || "",
+      }));
+      setPassengerDetails(newPassengerDetails);
+    } else if (bussitting !== 1 && selectedSeats.length > 0) {
+      const newPassengerDetails = selectedSeats.map((seat) => ({
+        seatNumber: seat.seatNo,
+        name: "",
+        age: "",
+        gender: seat.userGender || "",
+      }));
+      setPassengerDetails(newPassengerDetails);
+    }
+  }, [seats_data, selected, selectedSeats, bussitting]);
 
-    const seatId = seat.number;
-    let newSelected = [...selected];
+  const toggleSeat = (rowIdx, seatIdx) => {
+    const seat = seats[rowIdx].flat()[seatIdx];
+    const isSelected = selected.find((s) => s.number === seat.number);
 
-    if (newSelected.includes(seatId)) {
-      newSelected = newSelected.filter((num) => num !== seatId);
-    } else {
-      newSelected.push(seatId);
+    const adjacentSeats = [];
+    const allSeatsInRow = seats[rowIdx].flat();
+    const currentIndex = allSeatsInRow.findIndex(
+      (s) => s.number === seat.number
+    );
+    if (currentIndex > 0) adjacentSeats.push(allSeatsInRow[currentIndex - 1]);
+    if (currentIndex < allSeatsInRow.length - 1)
+      adjacentSeats.push(allSeatsInRow[currentIndex + 1]);
+
+    const hasFemaleAdjacent = adjacentSeats.some(
+      (s) =>
+        s.status === "female-booked" ||
+        selected.find(
+          (sel) => sel.number === s.number && sel.gender === "female"
+        )
+    );
+
+    const hasMaleAdjacent = adjacentSeats.some(
+      (s) =>
+        s.status === "male-booked" ||
+        selected.find((sel) => sel.number === s.number && sel.gender === "male")
+    );
+
+    let userGender = null;
+    let colorClass = "selected";
+
+    if (hasFemaleAdjacent) {
+      userGender = "female";
+      colorClass = "selected-female";
+    } else if (hasMaleAdjacent) {
+      userGender = "male";
+      colorClass = "selected-male";
     }
 
-    setSelected(newSelected);
+    if (hasFemaleAdjacent && hasMaleAdjacent) {
+      toast.error("Cannot select seat adjacent to both male and female seats.");
+      return;
+    }
+
+    if (isSelected) {
+      setSelected(selected.filter((s) => s.number !== seat.number));
+      setTotalPrice(totalPrice - seat.price);
+      setPassengerDetails(
+        passengerDetails.filter((p) => p.seatNumber !== seat.number)
+      );
+    } else {
+      setSelected([...selected, { ...seat, userGender, colorClass }]);
+      setTotalPrice(totalPrice + seat.price);
+    }
   };
 
   const generateSeatsSleeper = (type) => {
+    if (!seats_data || !Array.isArray(seats_data)) return [];
+
+    const filteredSeats = seats_data.filter(
+      (seat) => seat.UpLowBerth === type && !seat.SeatNo.startsWith("T")
+    );
+
     const seats = [];
-    for (let i = 0; i < rows; i++) {
-      seats.push(
-        { id: `${type}-left-${i}`, position: "left" },
-        { id: `${type}-right-${i}-1`, position: "right" },
-        { id: `${type}-right-${i}-2`, position: "right" }
-      );
-    }
+    const price = 521; // Default price from seats_data, adjust as needed
+
+    const seatsByRow = {};
+    filteredSeats.forEach((seat) => {
+      if (!seatsByRow[seat.Row]) seatsByRow[seat.Row] = [];
+      seatsByRow[seat.Row].push(seat);
+    });
+
+    Object.keys(seatsByRow).forEach((row) => {
+      const rowSeats = seatsByRow[row].sort((a, b) => a.Column - b.Column);
+      rowSeats.forEach((seat) => {
+        let status = "available";
+        let gender = null;
+
+        if (seat.Available === "N") {
+          status = "already booked";
+          if (seat.IsLadiesSeat === "Y") {
+            status = "female-booked";
+            gender = "female";
+          } else if (seat.BookedByGender === "male") {
+            status = "male-booked";
+            gender = "male";
+          }
+        } else if (seat.Available === "Y" && seat.IsLadiesSeat === "Y") {
+          status = "available only for female passenger";
+        }
+
+        seats.push({
+          id: `${type.toLowerCase()}-${seat.SeatNo.toLowerCase()}-${seat.Row}-${
+            seat.Column
+          }`,
+          position: seat.Column === 1 ? "left" : "right",
+          price: seat.SeatRate || price,
+          status,
+          gender,
+          seatNo: seat.SeatNo,
+        });
+      });
+    });
+
     return seats;
   };
 
-  const lowerSeats = generateSeatsSleeper("lower");
-  const upperSeats = generateSeatsSleeper("upper");
+  const [lowerSeats, setLowerSeats] = useState(generateSeatsSleeper("LB"));
+  const [upperSeats, setUpperSeats] = useState(generateSeatsSleeper("UB"));
 
-  const [selectedSeats, setSelectedSeats] = useState([]);
+  const toggleSeatSleeper = (seatId, allSeats) => {
+    const seat = allSeats.find((s) => s.id === seatId);
+    const isSelected = selectedSeats.find((s) => s.id === seatId);
 
-  const toggleSeatSleeper = (seatId) => {
-    setSelectedSeats((prev) =>
-      prev.includes(seatId)
-        ? prev.filter((id) => id !== seatId)
-        : [...prev, seatId]
-    );
+    const index = allSeats.findIndex((s) => s.id === seatId);
+
+    const isSeat1 = index % 3 === 0;
+
+    let userGender = null;
+    let colorClass = "selected";
+
+    if (!isSeat1) {
+      const adjacentSeats = [];
+      if (index > 0) adjacentSeats.push(allSeats[index - 1]);
+      if (index < allSeats.length - 1) adjacentSeats.push(allSeats[index + 1]);
+
+      const hasFemaleAdjacent = adjacentSeats.some(
+        (s) =>
+          s.status === "female-booked" ||
+          selectedSeats.find(
+            (sel) => sel.id === s.id && sel.gender === "female"
+          )
+      );
+
+      const hasMaleAdjacent = adjacentSeats.some(
+        (s) =>
+          s.status === "male-booked" ||
+          selectedSeats.find((sel) => sel.id === s.id && sel.gender === "male")
+      );
+
+      if (hasFemaleAdjacent) {
+        userGender = "female";
+        colorClass = "selected-female";
+      } else if (hasMaleAdjacent) {
+        userGender = "male";
+        colorClass = "selected-male";
+      }
+
+      if (hasFemaleAdjacent && hasMaleAdjacent) {
+        toast.error(
+          "Cannot select sleeper berth adjacent to both male and female seats."
+        );
+        return;
+      }
+    }
+
+    if (isSelected) {
+      setSelectedSeats(selectedSeats.filter((s) => s.id !== seatId));
+      setTotalPrice(totalPrice - seat.price);
+      setPassengerDetails(
+        passengerDetails.filter((p) => p.seatNumber !== seat.seatNo)
+      );
+    } else {
+      setSelectedSeats([...selectedSeats, { ...seat, userGender, colorClass }]);
+      setTotalPrice(totalPrice + seat.price);
+    }
   };
 
   const renderSeatsSleeper = (seats) => {
@@ -118,13 +635,26 @@ const SeatSelection = () => {
           {seat1 && (
             <div className="seatsleeper-block single">
               <div
-                className={`seatsleeper ${
-                  selectedSeats.includes(seat1.id) ? "selected" : ""
+                className={`seatsleeper ${seat1.status} ${
+                  selectedSeats.find((s) => s.id === seat1.id)?.colorClass || ""
                 }`}
-                onClick={() => toggleSeatSleeper(seat1.id)}
+                onClick={() =>
+                  !["already booked", "female-booked", "male-booked"].includes(
+                    seat1.status
+                  ) && toggleSeatSleeper(seat1.id, seats)
+                }
+                style={{
+                  cursor: [
+                    "already booked",
+                    "female-booked",
+                    "male-booked",
+                  ].includes(seat1.status)
+                    ? "not-allowed"
+                    : "pointer",
+                }}
               >
                 <div className="seat-shape"></div>
-                <div className="seat-price">{price}</div>
+                <div className="seat-price">₹{seat1.price}</div>
               </div>
             </div>
           )}
@@ -137,13 +667,30 @@ const SeatSelection = () => {
                 seat && (
                   <div
                     key={seat.id}
-                    className={`seatsleeper ${
-                      selectedSeats.includes(seat.id) ? "selected" : ""
+                    className={`seatsleeper ${seat.status} ${
+                      selectedSeats.find((s) => s.id === seat.id)?.colorClass ||
+                      ""
                     }`}
-                    onClick={() => toggleSeatSleeper(seat.id)}
+                    onClick={() =>
+                      ![
+                        "already booked",
+                        "female-booked",
+                        "male-booked",
+                      ].includes(seat.status) &&
+                      toggleSeatSleeper(seat.id, seats)
+                    }
+                    style={{
+                      cursor: [
+                        "already booked",
+                        "female-booked",
+                        "male-booked",
+                      ].includes(seat.status)
+                        ? "not-allowed"
+                        : "pointer",
+                    }}
                   >
                     <div className="seat-shape"></div>
-                    <div className="seat-price">{price}</div>
+                    <div className="seat-price">₹{seat.price}</div>
                   </div>
                 )
             )}
@@ -154,129 +701,805 @@ const SeatSelection = () => {
     return rows;
   };
 
+  const getSeatImage = (seat) => {
+    const selectedSeat = selected.find((s) => s.number === seat.number);
+
+    if (seat.status === "female-booked" || selectedSeat?.gender === "female") {
+      return require("../../Assets/whiteseat.png");
+    }
+    if (seat.status === "male-booked" || selectedSeat?.gender === "male") {
+      return require("../../Assets/maleseat.png");
+    }
+    if (selectedSeat) {
+      return require("../../Assets/greenseat.png");
+    }
+    return require("../../Assets/greenseat.png");
+  };
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  console.log("qwertyu", login);
+
   return (
-    <div className="mainzk-cont">
-      {/* <div className="bus-container">
-        <div className="steering-wheel">
-          <PiSteeringWheelFill size={40} />
-        </div>
-
-        <div className="seats">
-          {seats.map((row, rowIdx) => (
-            <div key={rowIdx} className="seat-row">
-              {row.map((seat, colIdx) => (
-                <React.Fragment key={colIdx}>
-                  {colIdx === 2 && <div className="aisle" />}
-                  <div className="seat-block">
-                    <div
-                      className={`seat-image ${
-                        selected.includes(seat.number) ? "selected" : ""
-                      }`}
-                      onClick={() => toggleSeat(rowIdx, colIdx)}
-                    />
-                    <div className="seat-price">₹{seat.price}</div>
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div> */}
-
-      <div className="layout-container">
-        <div className="columnn">
-          <h4 className="column-title">LOWER BERTH (27)</h4>
-          {renderSeatsSleeper(lowerSeats)}
-        </div>
-        <div className="columnn">
-          <h4 className="column-title">UPPER BERTH (27)</h4>
-          {renderSeatsSleeper(upperSeats)}
-        </div>
-      </div>
-
-      <div className="pickupdrop-container">
-        <div className="addresscards">
-          <h5
-            style={{ marginBottom: 20, fontWeight: "bolder", paddingLeft: 20 }}
+    <>
+      <div className="mainzk-cont">
+        {loading ? (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: "2rem",
+            }}
           >
-            Boarding points
-          </h5>
-          {boardingPoints.map((point, index) => (
-            <div
-              key={index}
-              style={{
-                backgroundColor:
-                  selectedBoarding === point.name ? "#fff4eb" : "transparent",
-                padding: 10,
-                borderRadius: 10,
-                marginBottom: 10,
-              }}
-            >
-              <label className="labelnistyle">
-                <div className="labelnistylenochild1">
-                  <input
-                    type="radio"
-                    name="boarding"
-                    className="custom-radiozk"
-                    value={point.name}
-                    checked={selectedBoarding === point.name}
-                    onChange={() => setSelectedBoarding(point.name)}
-                  />
+            <div className="loader">
+              <div className="spinner"></div>
+              <p className="loading-text">Loading...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {bussitting === 1 || bussitting === "1" ? (
+              <div className="bus-container">
+                <div className="steering-wheel">
+                  <PiSteeringWheelFill size={40} />
                 </div>
-                <div className="labelnistylenochild2">
-                  <div className="radio-content">
-                    <div className="radio-title">
-                      {point.time} &nbsp; {point.name}
+                <div className="seats">
+                  {seats.map((row, rowIdx) => (
+                    <div key={rowIdx} className="seat-row">
+                      {/* Left pair */}
+                      {row[0].map((seat, seatIdx) => {
+                        // Find the index of the nearest "female-booked" seat
+                        const femaleBookedIndex = row[0].findIndex(
+                          (s) => s.status === "female-booked"
+                        );
+
+                        // Determine if current seat is available and adjacent to or before a "female-booked" seat
+                        const isAdjacentOrBefore =
+                          femaleBookedIndex !== -1 &&
+                          (seatIdx <= femaleBookedIndex ||
+                            seatIdx === femaleBookedIndex + 1) &&
+                          seat.status === "available";
+
+                        return (
+                          <div key={seatIdx} className="seat-block">
+                            <Tooltip
+                              className={`seat-image ${seat.status} ${
+                                selected.find((s) => s.number === seat.number)
+                                  ?.colorClass || ""
+                              }`}
+                              title={
+                                isAdjacentOrBefore ? (
+                                  <div
+                                    style={{
+                                      whiteSpace: "pre-line",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    Reserved for lady{"\n"}Seat {seat.number}
+                                    {"\n"}₹{seat.price}
+                                  </div>
+                                ) : seat.status === "available" ? (
+                                  <div
+                                    style={{
+                                      whiteSpace: "pre-line",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    Available{"\n"}Seat {seat.number}
+                                    {"\n"}₹{seat.price}
+                                  </div>
+                                ) : null
+                              }
+                              onClick={() =>
+                                ![
+                                  "already booked",
+                                  "female-booked",
+                                  "male-booked",
+                                ].includes(seat.status) &&
+                                toggleSeat(rowIdx, seatIdx)
+                              }
+                              style={{
+                                cursor: [
+                                  "already booked",
+                                  "female-booked",
+                                  "male-booked",
+                                ].includes(seat.status)
+                                  ? "not-allowed"
+                                  : "pointer",
+                              }}
+                              sx={{ whiteSpace: "pre-line" }}
+                            >
+                              <img src={getSeatImage(seat)} alt="seat" />
+                            </Tooltip>
+                            <div className="seat-price">₹{seat.price}</div>
+                          </div>
+                        );
+                      })}
+                      {/* Aisle */}
+                      <div className="aisle" />
+                      {/* Right pair */}
+                      {row[1].map((seat, seatIdx) => {
+                        // Find the index of the nearest "female-booked" seat in row[1]
+                        const femaleBookedIndex = row[1].findIndex(
+                          (s) => s.status === "female-booked"
+                        );
+
+                        // Determine if current seat is available and adjacent to or before a "female-booked" seat
+                        const isAdjacentOrBefore =
+                          femaleBookedIndex !== -1 &&
+                          (seatIdx <= femaleBookedIndex ||
+                            seatIdx === femaleBookedIndex + 1) &&
+                          seat.status === "available";
+
+                        return (
+                          <div key={seatIdx + 2} className="seat-block">
+                            <Tooltip
+                              className={`seat-image ${seat.status} ${
+                                selected.find((s) => s.number === seat.number)
+                                  ?.colorClass || ""
+                              }`}
+                              title={
+                                isAdjacentOrBefore ? (
+                                  <div
+                                    style={{
+                                      whiteSpace: "pre-line",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    reserved for lady{"\n"}seat {seat.number}
+                                    {"\n"}₹{seat.price}
+                                  </div>
+                                ) : seat.status === "available" ? (
+                                  <div
+                                    style={{
+                                      whiteSpace: "pre-line",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    Available{"\n"}seat {seat.number}
+                                    {"\n"}₹{seat.price}
+                                  </div>
+                                ) : null
+                              }
+                              onClick={() =>
+                                ![
+                                  "already booked",
+                                  "female-booked",
+                                  "male-booked",
+                                ].includes(seat.status) &&
+                                toggleSeat(rowIdx, seatIdx + 2)
+                              }
+                              style={{
+                                cursor: [
+                                  "already booked",
+                                  "female-booked",
+                                  "male-booked",
+                                ].includes(seat.status)
+                                  ? "not-allowed"
+                                  : "pointer",
+                              }}
+                              sx={{ whiteSpace: "pre-line" }}
+                            >
+                              <img src={getSeatImage(seat)} alt="seat" />
+                            </Tooltip>
+                            <div className="seat-price">₹{seat.price}</div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    {point.address && (
-                      <div className="radio-subtitle">{point.address}</div>
-                    )}
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="layout-container">
+                <div className="columnn">
+                  <div className="steering-wheel sleeper_flex_front">
+                    <div className="column-title">LOWER BERTH</div>
+                    <PiSteeringWheelFill size={35} />
                   </div>
+                  {renderSeatsSleeper(lowerSeats)}
                 </div>
-              </label>
+                <div className="columnn">
+                  <h4 className="column-title">UPPER BERTH</h4>
+                  {renderSeatsSleeper(upperSeats)}
+                </div>
+              </div>
+            )}
+            <div className="seat-types-container1">
+              <h3 className="seat-title">Know your seat types</h3>
+              <div className="seat-table">
+                <div className="seat-table-header">
+                  <div>Seat Types</div>
+                  <div>Seater</div>
+                  <div>Sleeper</div>
+                </div>
+                {seatTypes.map((item, index) => (
+                  <div className="seat-table-row" key={index}>
+                    <div>{item.label}</div>
+                    <div>
+                      <div className={item.seaterClass}></div>
+                    </div>
+                    <div>
+                      <div className={item.sleeperClass}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
 
-        {/* Dropping Points */}
-        <div className="addresscards">
-          <h5
-            style={{ marginBottom: 20, fontWeight: "bolder", paddingLeft: 20 }}
-          >
-            Dropping points
-          </h5>
-          {droppingPoints.map((drop, index) => (
-            <div
-              key={index}
-              style={{
-                backgroundColor:
-                  selectedDropping === drop ? "#fff4eb" : "transparent",
-                padding: 10,
-                borderRadius: 10,
-                marginBottom: 10,
-              }}
-            >
-              <label className="labelnistyle">
-                <div className="labelnistylenochild1">
-                  <input
-                    type="radio"
-                    name="dropping"
-                    className="custom-radiozk"
-                    value={drop}
-                    checked={selectedDropping === drop}
-                    onChange={() => setSelectedDropping(drop)}
-                    style={{ marginRight: 10 }}
-                  />
-                </div>
-                <div className="labelnistylenochild2">
-                  <div style={{ fontWeight: "bold", fontSize: 16 }}>{drop}</div>
-                </div>
-              </label>
+            <div className="pickupdrop-container">
+              <div className="addresscards">
+                <h5
+                  style={{
+                    marginBottom: 20,
+                    fontWeight: "bolder",
+                    paddingLeft: 20,
+                  }}
+                >
+                  Boarding points
+                </h5>
+                {boardingPoints.map((point, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      backgroundColor:
+                        selectedBoarding === point.name
+                          ? "#fff4eb"
+                          : "transparent",
+                      padding: 10,
+                      borderRadius: 10,
+                      marginBottom: 10,
+                    }}
+                  >
+                    <label className="labelnistyle">
+                      <div className="labelnistylenochild1">
+                        <input
+                          type="radio"
+                          name="boarding"
+                          className="custom-radiozk"
+                          value={point.name}
+                          checked={selectedBoarding === point.name}
+                          onChange={() => setSelectedBoarding(point.name)}
+                        />
+                      </div>
+                      <div className="labelnistylenochild2">
+                        <div className="radio-content">
+                          <div className="radio-title">
+                            {point.time}   {point.name}
+                          </div>
+                          {point.address && (
+                            <div className="radio-subtitle">
+                              {point.address}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              <div className="addresscards">
+                <h5
+                  style={{
+                    marginBottom: 20,
+                    fontWeight: "bolder",
+                    paddingLeft: 20,
+                  }}
+                >
+                  Dropping points
+                </h5>
+                {droppingPoints.map((drop, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      backgroundColor:
+                        selectedDropping === drop.name
+                          ? "#fff4eb"
+                          : "transparent",
+                      padding: 10,
+                      borderRadius: 10,
+                      marginBottom: 10,
+                    }}
+                  >
+                    <label className="labelnistyle">
+                      <div className="labelnistylenochild1">
+                        <input
+                          type="radio"
+                          name="dropping"
+                          className="custom-radiozk"
+                          value={drop.name}
+                          checked={selectedDropping === drop.name}
+                          onChange={() => setSelectedDropping(drop.name)}
+                          style={{ marginRight: 10 }}
+                        />
+                      </div>
+                      <div className="labelnistylenochild2">
+                        <div style={{ fontWeight: "bold", fontSize: 16 }}>
+                          {drop.time}  {drop.name}
+                        </div>
+                        {drop.address && (
+                          <div className="radio-subtitle">{drop.address}</div>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <div
+                className={[
+                  "bottom-sheet",
+                  selected.length > 0 || selectedSeats.length > 0 ? "show" : "",
+                  isExpanded ? "expanded" : "",
+                ].join(" ")}
+              >
+                {!isExpanded ? (
+                  <>
+                    <div className="sheet-left">
+                      <span>
+                        {selected.length || selectedSeats.length} seat
+                      </span>
+                      <strong>₹{totalPrice}</strong>
+                    </div>
+                    <button
+                      className="sheet-button-Proceed"
+                      disabled={!selectedBoarding || !selectedDropping}
+                      onClick={() => {
+                        if (!selectedBoarding || !selectedDropping) {
+                          alert("Select boarding & dropping");
+                        } else if (login == null) {
+                          toast.error("Please login to proceed");
+                        } else {
+                          setIsExpanded(true);
+                        }
+                      }}
+                    >
+                      Proceed
+                    </button>
+                  </>
+                ) : (
+                  <div className="sheet-expanded">
+                    <button
+                      className="sheet-close-btn"
+                      onClick={() => setIsExpanded(false)}
+                    >
+                      ×
+                    </button>
+
+                    <div className="sheet-expanded-content">
+                      <div className="form-section">
+                        <h4>Contact details</h4>
+                        <p>We’ll send your ticket here</p>
+                        <TextField
+                          id="outlined-basic"
+                          label="Email"
+                          size="small"
+                          value={email ? email : userr?.email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          variant="outlined"
+                          className="my-email-field"
+                        />
+                        <TextField
+                          id="outlined-basic"
+                          label="Phone No."
+                          size="small"
+                          value={phone ? phone : userr?.mobile_no}
+                          onChange={(e) => setPhone(e.target.value)}
+                          variant="outlined"
+                          className="my-email-field"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="sheet-expanded-content">
+                      <div className="form-section">
+                        <h4>Passenger details</h4>
+                        {bussitting === 1 ? (
+                          <>
+                            {selected.map((seat, index) => {
+                              const passenger = passengerDetails.find(
+                                (p) => p.seatNumber === seat.number
+                              ) || {
+                                seatNumber: seat.number,
+                                name: "",
+                                age: "",
+                                gender: seat.userGender || "",
+                              };
+                              return (
+                                <Accordion
+                                  style={{ marginTop: 20 }}
+                                  key={index}
+                                  expanded={expanded === index}
+                                  onChange={(_, isOpen) =>
+                                    setExpanded(isOpen ? index : false)
+                                  }
+                                  sx={{
+                                    borderRadius: 2,
+                                    mb: 1,
+                                    boxShadow: "0 0 0 rgba(0,0,0,0.1)",
+                                    "&:before": { display: "none" },
+                                    backgroundColor: "transparent",
+                                  }}
+                                >
+                                  <AccordionSummary
+                                    expandIcon={<FaAngleDown />}
+                                    sx={{
+                                      py: 1,
+                                      px: 2,
+                                      "& .MuiAccordionSummary-content": {
+                                        alignItems: "center",
+                                        gap: 2,
+                                      },
+                                    }}
+                                  >
+                                    <Avatar sx={{ bgcolor: "#e0f2f1" }}>
+                                      <IoPerson color="#00796b" />
+                                    </Avatar>
+                                    <Box>
+                                      <Typography
+                                        variant="subtitle1"
+                                        style={{ fontWeight: "bold" }}
+                                      >
+                                        Passenger {index + 1}
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        Seat No. {seat?.number}
+                                      </Typography>
+                                    </Box>
+                                  </AccordionSummary>
+
+                                  <AccordionDetails sx={{ px: 2, pb: 2 }}>
+                                    <Box
+                                      display="flex"
+                                      flexDirection="column"
+                                      gap={1}
+                                    >
+                                      <TextField
+                                        id={`name-${index}`}
+                                        label="Name"
+                                        variant="outlined"
+                                        size="small"
+                                        value={passenger.name}
+                                        onChange={(e) => {
+                                          const newPassengerDetails =
+                                            passengerDetails.map((p) =>
+                                              p.seatNumber === seat.number
+                                                ? { ...p, name: e.target.value }
+                                                : p
+                                            );
+                                          setPassengerDetails(
+                                            newPassengerDetails
+                                          );
+                                        }}
+                                        className="my-name-field"
+                                      />
+                                      <TextField
+                                        id={`age-${index}`}
+                                        label="Age"
+                                        variant="outlined"
+                                        size="small"
+                                        value={passenger.age}
+                                        onChange={(e) => {
+                                          const newPassengerDetails =
+                                            passengerDetails.map((p) =>
+                                              p.seatNumber === seat.number
+                                                ? { ...p, age: e.target.value }
+                                                : p
+                                            );
+                                          setPassengerDetails(
+                                            newPassengerDetails
+                                          );
+                                        }}
+                                        className="my-name-field"
+                                      />
+                                    </Box>
+                                    <div className="gender-container">
+                                      <label className="gender-label">
+                                        Gender
+                                      </label>
+                                      {seat?.userGender === "female" ? (
+                                        <p
+                                          style={{
+                                            color: "black",
+                                            textTransform: "capitalize",
+                                          }}
+                                        >
+                                          female (reserved seat )
+                                        </p>
+                                      ) : (
+                                        <div className="gender-toggle">
+                                          <button
+                                            className={`gender-option ${
+                                              passenger.gender === "male"
+                                                ? "active"
+                                                : ""
+                                            }`}
+                                            onClick={() => {
+                                              const newPassengerDetails =
+                                                passengerDetails.map((p) =>
+                                                  p.seatNumber === seat.number
+                                                    ? { ...p, gender: "male" }
+                                                    : p
+                                                );
+                                              setPassengerDetails(
+                                                newPassengerDetails
+                                              );
+                                            }}
+                                          >
+                                            <div className="gender-icon">
+                                              <FaMale size={20} />{" "}
+                                              <div>Male</div>
+                                            </div>
+                                          </button>
+                                          <Divider
+                                            orientation="vertical"
+                                            flexItem
+                                          />
+                                          <button
+                                            className={`gender-option ${
+                                              passenger.gender === "female"
+                                                ? "activee"
+                                                : ""
+                                            }`}
+                                            onClick={() => {
+                                              const newPassengerDetails =
+                                                passengerDetails.map((p) =>
+                                                  p.seatNumber === seat.number
+                                                    ? { ...p, gender: "female" }
+                                                    : p
+                                                );
+                                              setPassengerDetails(
+                                                newPassengerDetails
+                                              );
+                                            }}
+                                          >
+                                            <div className="gender-icon">
+                                              <FaFemale size={20} />{" "}
+                                              <div>Female</div>
+                                            </div>
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </AccordionDetails>
+                                </Accordion>
+                              );
+                            })}
+                          </>
+                        ) : (
+                          <>
+                            {selectedSeats.map((seat, index) => {
+                              const passenger = passengerDetails.find(
+                                (p) => p.seatNumber === seat.seatNo
+                              ) || {
+                                seatNumber: seat.seatNo,
+                                name: "",
+                                age: "",
+                                gender: seat.userGender || "",
+                              };
+                              return (
+                                <Accordion
+                                  style={{ marginTop: 20 }}
+                                  key={index}
+                                  expanded={expanded === index}
+                                  onChange={(_, isOpen) =>
+                                    setExpanded(isOpen ? index : false)
+                                  }
+                                  sx={{
+                                    borderRadius: 2,
+                                    mb: 1,
+                                    boxShadow: "0 0 0 rgba(0,0,0,0.1)",
+                                    "&:before": { display: "none" },
+                                    backgroundColor: "transparent",
+                                  }}
+                                >
+                                  <AccordionSummary
+                                    expandIcon={<FaAngleDown />}
+                                    sx={{
+                                      py: 1,
+                                      px: 2,
+                                      "& .MuiAccordionSummary-content": {
+                                        alignItems: "center",
+                                        gap: 2,
+                                      },
+                                    }}
+                                  >
+                                    <Avatar sx={{ bgcolor: "#e0f2f1" }}>
+                                      <IoPerson color="#00796b" />
+                                    </Avatar>
+                                    <Box>
+                                      <Typography
+                                        variant="subtitle1"
+                                        style={{ fontWeight: "bold" }}
+                                      >
+                                        Passenger {index + 1}
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        Seat No. {seat?.seatNo}
+                                      </Typography>
+                                    </Box>
+                                  </AccordionSummary>
+
+                                  <AccordionDetails sx={{ px: 2, pb: 2 }}>
+                                    <Box
+                                      display="flex"
+                                      flexDirection="column"
+                                      gap={1}
+                                    >
+                                      <TextField
+                                        id={`name-${index}`}
+                                        label="Name"
+                                        variant="outlined"
+                                        size="small"
+                                        value={passenger.name}
+                                        onChange={(e) => {
+                                          const newPassengerDetails =
+                                            passengerDetails.map((p) =>
+                                              p.seatNumber === seat.seatNo
+                                                ? { ...p, name: e.target.value }
+                                                : p
+                                            );
+                                          setPassengerDetails(
+                                            newPassengerDetails
+                                          );
+                                        }}
+                                        className="my-name-field"
+                                      />
+                                      <TextField
+                                        id={`age-${index}`}
+                                        label="Age"
+                                        variant="outlined"
+                                        size="small"
+                                        value={passenger.age}
+                                        onChange={(e) => {
+                                          const newPassengerDetails =
+                                            passengerDetails.map((p) =>
+                                              p.seatNumber === seat.seatNo
+                                                ? { ...p, age: e.target.value }
+                                                : p
+                                            );
+                                          setPassengerDetails(
+                                            newPassengerDetails
+                                          );
+                                        }}
+                                        className="my-name-field"
+                                      />
+                                    </Box>
+                                    <div className="gender-container">
+                                      <label className="gender-label">
+                                        Gender
+                                      </label>
+                                      {seat?.userGender === "female" ? (
+                                        <p
+                                          style={{
+                                            color: "black",
+                                            textTransform: "capitalize",
+                                          }}
+                                        >
+                                          female (reserved seat)
+                                        </p>
+                                      ) : (
+                                        <div className="gender-toggle">
+                                          <button
+                                            className={`gender-option ${
+                                              passenger.gender === "male"
+                                                ? "active"
+                                                : ""
+                                            }`}
+                                            onClick={() => {
+                                              const newPassengerDetails =
+                                                passengerDetails.map((p) =>
+                                                  p.seatNumber === seat.seatNo
+                                                    ? { ...p, gender: "male" }
+                                                    : p
+                                                );
+                                              setPassengerDetails(
+                                                newPassengerDetails
+                                              );
+                                            }}
+                                          >
+                                            <div className="gender-icon">
+                                              <FaMale size={20} />{" "}
+                                              <div>Male</div>
+                                            </div>
+                                          </button>
+                                          <Divider
+                                            orientation="vertical"
+                                            flexItem
+                                          />
+                                          <button
+                                            className={`gender-option ${
+                                              passenger.gender === "female"
+                                                ? "activee"
+                                                : ""
+                                            }`}
+                                            onClick={() => {
+                                              const newPassengerDetails =
+                                                passengerDetails.map((p) =>
+                                                  p.seatNumber === seat.seatNo
+                                                    ? { ...p, gender: "female" }
+                                                    : p
+                                                );
+                                              setPassengerDetails(
+                                                newPassengerDetails
+                                              );
+                                            }}
+                                          >
+                                            <div className="gender-icon">
+                                              <FaFemale size={20} />{" "}
+                                              <div>Female</div>
+                                            </div>
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </AccordionDetails>
+                                </Accordion>
+                              );
+                            })}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="d-flex justify-content-center align-items-center">
+                      <button
+                        className="sheet-button"
+                        onClick={handleConfirm}
+                        disabled={book_seat_data_loading}
+                      >
+                        {book_seat_data_loading
+                          ? "Processing..."
+                          : "Confirm Booking"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="seat-types-container">
+        <h3 className="seat-title">Know your seat types</h3>
+        <div className="seat-table">
+          <div className="seat-table-header">
+            <div>Seat Types</div>
+            <div>Seater</div>
+            <div>Sleeper</div>
+          </div>
+          {seatTypes.map((item, index) => (
+            <div className="seat-table-row" key={index}>
+              <div>{item.label}</div>
+              <div>
+                <div className={item.seaterClass}></div>
+              </div>
+              <div>
+                <div className={item.sleeperClass}></div>
+              </div>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -10,11 +10,14 @@ import DashBoard from "./Pages/Dashboard/DashBoard";
 import Profile from "./Pages/Profile/Profile";
 import ViewBooking from "./Pages/ViewBooking/ViewBooking";
 import SeatSelection from "./Pages/SeatSelection/SeatSelection";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import ViewBookingBus from "./Pages/ViewBooking/ViewBookingBus";
 
 function App() {
   return (
     <BrowserRouter
-      basename="airlineticketapi"
+      basename="busticket"
       future={{ v7_startTransition: true }}
     >
       <Navbar />
@@ -30,8 +33,10 @@ function App() {
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contactus" element={<ContactUs />} />
         <Route path="/ViewBooking" element={<ViewBooking />} />
+        <Route path="/ViewBookingBus" element={<ViewBookingBus />} />
       </Routes>
       <Footer />
+      <ToastContainer position="top-right" />
     </BrowserRouter>
   );
 }

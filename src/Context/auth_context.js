@@ -19,12 +19,22 @@ import {
   LOGIN_BEGIN_AIR_LIVE,
   LOGIN_FAIL_AIR_LIVE,
   LOGIN_SUCCESS_AIR_LIVE,
+  GET_COMPANY_LIST_SUCCESS,
+  GET_COMPANY_LIST_BEGIN,
+  GET_COMPANY_LIST_ERROR,
+  GET_CANCELLATION_POLICY_BEGIN,
+  GET_CANCELLATION_POLICY_SUCCESS,
+  GET_CANCELLATION_POLICY_ERROR,
+  GET_CURRENT_ACCOUNT_BALANCE_ERROR,
+  GET_CURRENT_ACCOUNT_BALANCE_BEGIN,
+  GET_CURRENT_ACCOUNT_BALANCE_SUCCESS,
 } from "../Actions";
 
 import {
   ACCEPT_HEADER,
   ACCEPT_HEADER1,
   change_password,
+  dynamic_curl,
   forgot_password,
   login,
   login2,
@@ -45,6 +55,10 @@ const initialState = {
   is_token: "",
   login_data_air_live: {},
   is_token_air_live: "",
+  cancellation_policy: [],
+  cancellation_policy_loading: false,
+  currentaccountbalance: "",
+  currentaccountbalanceloading: false,
 };
 
 const AuthContext = React.createContext();
@@ -200,7 +214,7 @@ export const AuthProvider = ({ children }) => {
 
   const setLogin = async (params) => {
     console.log("params", params);
-  dispatch({ type: LOGIN_BEGIN });
+    dispatch({ type: LOGIN_BEGIN });
     // proxy + "https://omairiq.azurewebsites.net/login",
     try {
       const response = await fetch(logincurl,
@@ -277,6 +291,86 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: LOGIN_FAIL });
       localStorage.setItem("is_login", JSON.stringify(false));
       console.error("Login error:", error);
+      return null;
+    }
+  };
+
+  const companyListBusApi = async (params) => {
+    dispatch({ type: GET_COMPANY_LIST_BEGIN });
+
+    try {
+      const resp = await axios.post(dynamic_curl, params, {
+        headers: {
+          Accept: ACCEPT_HEADER,
+        },
+      });
+      const companylist = resp.data;
+      if (companylist.status == 1) {
+        dispatch({ type: GET_COMPANY_LIST_SUCCESS, payload: companylist });
+        // Notification("success", "Success!", companylist.message);
+
+        localStorage.setItem("companyid", JSON.stringify(companylist.data.ITSCompanyList[0]?.CompanyID));
+      } else {
+        Notification("warning", "Warning!", companylist.message);
+        dispatch({ type: GET_COMPANY_LIST_ERROR });
+      }
+      return companylist;
+    } catch (error) {
+      dispatch({ type: GET_COMPANY_LIST_ERROR });
+      // localStorage.setItem("is_login", JSON.stringify(false));
+      console.error("Company List error:", error);
+      return null;
+    }
+  };
+  const currentAccountBalanceApi = async (params) => {
+    dispatch({ type: GET_CURRENT_ACCOUNT_BALANCE_BEGIN });
+
+    try {
+      const resp = await axios.post(dynamic_curl, params, {
+        headers: {
+          Accept: ACCEPT_HEADER,
+        },
+      });
+      const currentbalres = resp.data;
+      if (currentbalres.status == 1) {
+        dispatch({ type: GET_CURRENT_ACCOUNT_BALANCE_SUCCESS, payload: currentbalres.data.ITSCurrentAccountBAL[0].Balance});
+        // Notification("success", "Success!", currentbalres.message);
+      } else {
+        Notification("warning", "Warning!", currentbalres.message);
+        dispatch({ type: GET_CURRENT_ACCOUNT_BALANCE_ERROR });
+      }
+      return currentbalres;
+    } catch (error) {
+      dispatch({ type: GET_CURRENT_ACCOUNT_BALANCE_ERROR });
+      // localStorage.setItem("is_login", JSON.stringify(false));
+      console.error("Company List error:", error);
+      return null;
+    }
+  };
+
+  const getCancellationPolicyApi = async (params) => {
+    dispatch({ type: GET_CANCELLATION_POLICY_BEGIN });
+
+    try {
+      const resp = await axios.post(dynamic_curl, params, {
+        headers: {
+          Accept: ACCEPT_HEADER,
+        },
+      });
+      const companylist = resp.data;
+      if (companylist.status == 1) {
+
+        dispatch({ type: GET_CANCELLATION_POLICY_SUCCESS, payload: companylist.data.ITSCancellation });
+
+      } else {
+        Notification("warning", "Warning!", companylist.message);
+        dispatch({ type: GET_CANCELLATION_POLICY_ERROR });
+      }
+      return companylist;
+    } catch (error) {
+      dispatch({ type: GET_CANCELLATION_POLICY_ERROR });
+      // localStorage.setItem("is_login", JSON.stringify(false));
+      console.error("Company List error:", error);
       return null;
     }
   };
@@ -418,6 +512,9 @@ export const AuthProvider = ({ children }) => {
         forgotPassword,
         forgotPasswordOtp,
         LoginnAirLive,
+        companyListBusApi,
+        getCancellationPolicyApi,
+        currentAccountBalanceApi,
       }}
     >
       {children}

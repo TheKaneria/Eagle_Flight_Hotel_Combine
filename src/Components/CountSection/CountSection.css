@@ -1,0 +1,58 @@
+.counterSec_main {
+  position: relative;
+  margin: 1rem 0;
+  background-image: url("../../Assets/eaglebusbg.jpg");
+  background-position: center;
+  background-size: cover;
+  height: 60vh;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.7); /* black overlay */
+  z-index: 1;
+}
+
+.counter_content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-around;
+  gap: 4rem;
+  color: white;
+  text-align: center;
+  width: 1240px;
+  /* background-color: red; */
+}
+
+.counter_item h2 {
+  font-size: 3rem;
+  font-weight: 900;
+  margin: 0;
+}
+
+.counter_item p {
+  font-size: 1.2rem;
+  margin: 0.5rem 0 0;
+  font-weight: bold;
+}
+
+@media screen and (max-width: 768px) {
+  .counter_content {
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+  }
+  .counterSec_main {
+    height: auto;
+  }
+}

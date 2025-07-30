@@ -6,6 +6,14 @@
   background-position: center;
   padding: 0px;
 }
+.about_main_bus {
+  background: url("../../Assets/header_bus_bg.jpg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  text-align: center;
+  background-position: center;
+  padding: 0px;
+}
 .banner-area {
   display: flex;
   align-items: center;

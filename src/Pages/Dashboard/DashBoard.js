@@ -5,6 +5,8 @@ import PathHero from "../../Components/PathHeroComponent/PathHero";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { DatePicker } from "antd";
+import { useBusContext } from "../../Context/bus_context";
+
 import dayjs from "dayjs";
 import {
   FaInfoCircle,
@@ -17,7 +19,12 @@ import ReactModal from "react-modal";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import images from "../../Constants/images";
 import { IoAirplaneSharp, IoCloseCircle } from "react-icons/io5";
-import { ACCEPT_HEADER, get_booking } from "../../Utils/Constant";
+import {
+  ACCEPT_HEADER,
+  bookseatdetails,
+  get_booking,
+  verifyCall,
+} from "../../Utils/Constant";
 import axios from "axios";
 import moment from "moment";
 import html2pdf from "html2pdf.js";
@@ -25,41 +32,9 @@ import { MdCurrencyRupee, MdCancelPresentation } from "react-icons/md";
 import { BsFillLuggageFill, BsBookmarkCheckFill } from "react-icons/bs";
 import { GoDotFill } from "react-icons/go";
 import { GiCommercialAirplane } from "react-icons/gi";
+import { LuBus } from "react-icons/lu";
 
 const ITEMS_PER_PAGE = 20;
-
-const completedData = [
-  {
-    id: 1,
-    airline_name: "IndiGo",
-    booking_date: "2023-10-01",
-    to: "Delhi",
-    from: "Mumbai",
-    toDate: "2023-10-05",
-    fromDate: "2023-10-01",
-    toTime: "10:00 AM",
-    fromTime: "12:00 PM",
-    total: 2,
-    terminal: "Terminal 1",
-    name: "Parth Kariya",
-    image: require("../../Assets/IndiGoAirlines_logo.png"),
-  },
-  {
-    id: 2,
-    airline_name: "IndiGo",
-    booking_date: "2024-10-01",
-    to: "Rajkot",
-    from: "Bombay",
-    toDate: "2024-10-05",
-    fromDate: "2024-10-01",
-    toTime: "10:00 AM",
-    fromTime: "12:00 PM",
-    total: 1,
-    terminal: "Terminal 1",
-    name: "zeel kaneria",
-    image: require("../../Assets/Akasa_Air_logo.png"),
-  },
-];
 
 const DashBoard = () => {
   const [selectedTab, setSelectedTab] = useState("upcoming");
@@ -88,7 +63,14 @@ const DashBoard = () => {
 
   const totalPages = Math.ceil(getBookingDataFilter.length / ITEMS_PER_PAGE);
 
-  // Get the data for the current page
+  const {
+    ticketBookingDataApi,
+    GetBookSeatDetailsApi,
+    booking_data,
+    booking_data_loading,
+    selectedTabMainHome,
+  } = useBusContext();
+
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentData = filteredBookingData.slice(startIndex, endIndex);
@@ -231,10 +213,11 @@ const DashBoard = () => {
     var getcondition = localStorage.getItem("getConditionnn");
     setCondi(getcondition);
     GetBooking();
+    ticketBookingDataApi();
     window.scroll(0, 0);
   }, []);
 
-  console.log("currentData", currentData);
+  // console.log("currentData", currentData);
 
   const GetBooking = async () => {
     const token = JSON.parse(localStorage.getItem("is_token"));
@@ -283,15 +266,55 @@ const DashBoard = () => {
     setFilteredBookingData(filtered);
   };
 
-  console.log("getBooking Details", filteredBookingData);
+  const filterBookingsBus = (data, type) => {
+    const now = new Date();
+    const filtered = data.filter((item) => {
+      const departureDateTime = new Date(
+        `${item.departure_date}T${item.departure_time}`
+      );
+
+      if (type === "upcoming") {
+        return departureDateTime >= now;
+      } else if (type === "completed") {
+        return departureDateTime < now;
+      }
+      return true;
+    });
+
+    setFilteredBookingData(filtered);
+  };
+
+  const busBookings = (data, type) => {
+    const now = new Date();
+
+    const filtered = data.filter((item) => {
+      const departureDateTime = new Date(
+        `${item.departure_date}T${item.departure_time}`
+      );
+      if (type === "upcoming") {
+        return departureDateTime >= now;
+      } else if (type === "completed") {
+        return departureDateTime < now;
+      }
+      return true;
+    });
+
+    setFilteredBookingData(filtered);
+  };
 
   const handleTabChange = (type) => {
     setSelectedTab(type);
-    filterBookings(getBookingData, type);
+
+    if (selectedTabMainHome === "flights") {
+      filterBookings(getBookingData, type);
+    } else {
+      filterBookingsBus(booking_data, type);
+    }
   };
 
   useEffect(() => {
     filterBookings(getBookingData, selectedTab);
+    filterBookingsBus(booking_data, selectedTab);
   }, [getBookingData]);
 
   const filterFlights = () => {
@@ -329,12 +352,32 @@ const DashBoard = () => {
     SetbookingDataFilter(filteredData);
   };
 
+  const handleViewBookingBus = async (pnr) => {
+    const formdata = new FormData();
+    formdata.append("type", "POST");
+    formdata.append("url", bookseatdetails);
+    formdata.append("verifyCall", verifyCall);
+    formdata.append("pnrNo", pnr ? pnr : "");
+
+    const data = await GetBookSeatDetailsApi(formdata);
+
+    if (data) {
+      console.log("get book seat data", data);
+      if (data.status == 1) {
+        console.log("details ni api no log", data);
+
+        // setPnrNumber("");
+      }
+    }
+  };
+
   return (
     <div>
       <Helmet>
         <title>Dashboard | Airline Booking</title>
       </Helmet>
-      <PathHero name={"Dashboard"} />
+      <PathHero name="Dashboard" getSelectedTabService={selectedTabMainHome} />
+
       {loading === true ? (
         <>
           <div
@@ -393,127 +436,6 @@ const DashBoard = () => {
               </div>
             </div>
 
-            {/* {currentData.length > 0 && (
-              <div className="row my-3 justify-content-start justify-content-lg-around justify-content-md-center dashboar_resp_gap">
-                <div className="col-lg-3 col-md-5">
-                  <div className="text-center bkingtxt">Booking Date</div>
-                  <div className="d-flex justify-content-start align-items-center align-items-center mt-3">
-                    <div className="frmtxt text-lg-center text-start">From</div>
-                    <div className="text-center w-100">
-                      <div className="custom-date-picker booking_details_date_pickers">
-                        <DatePicker
-                          onChange={handleFromDateChange}
-                          value={fromDate}
-                          inputReadOnly={true}
-                          format="DD-MM-YYYY"
-                          placeholder="Select Date"
-                          disabledDate={disabledDate2}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="d-flex justify-content-start align-items-center align-items-center mt-3">
-                    <div className="frmtxt text-lg-center text-start">To</div>
-                    <div className="custom-date-picker w-100 booking_details_date_pickers">
-                      <DatePicker
-                        onChange={handleToDateChange}
-                        value={toDate}
-                        inputReadOnly={true}
-                        format="DD-MM-YYYY"
-                        placeholder="Select Date"
-                        disabledDate={(current) =>
-                          fromDate
-                            ? current && current.isBefore(fromDate, "day")
-                            : false
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-lg-3">
-                  <div className="text-center bkingtxt">Departure Date</div>
-                  <div className="d-flex gap-1 justify-content-around align-items-center mt-3">
-                    <div className="frmtxt w-25 text-center">From</div>
-                    <div className="text-center w-75">
-                      <div className="custom-date-picker booking_details_date_pickers">
-                        <DatePicker
-                          onChange={handleFromDateChange2}
-                          inputReadOnly={true}
-                          value={departureFromDate}
-                          format="DD-MM-YYYY"
-                          placeholder="Select Date"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="d-flex gap-1 justify-content-around align-items-center mt-3">
-                    <div className="frmtxt w-25 text-center">To</div>
-                    <div className="custom-date-picker w-75 booking_details_date_pickers">
-                      <DatePicker
-                        onChange={handleToDateChange2}
-                        value={departureToDate}
-                        inputReadOnly={true}
-                        format="DD-MM-YYYY"
-                        placeholder="Select Date"
-                        disabledDate={(current) =>
-                          departureFromDate
-                            ? current &&
-                              current.isBefore(departureFromDate, "day")
-                            : false
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-lg-3 col-md-5">
-                  <div className="text-center bkingtxt">City Name</div>
-                  <div className="my-3">
-                    <div className="w-100 w-md-50">
-                      <input
-                        type="text"
-                        className="txtinput txtinput_booking_details"
-                        value={dep}
-                        onChange={(e) => setDep(e.target.value)}
-                        placeholder="Enter departure city name"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      className="txtinput txtinput_booking_details"
-                      value={arr}
-                      onChange={(e) => setArr(e.target.value)}
-                      placeholder="Enter arrival city name"
-                    />
-                  </div>
-                </div>
-                <div className="col-lg-3 col-md-5">
-                  <div className="text-center bkingtxt">Search</div>
-                  <div className="my-3">
-                    <button
-                      className="btn w-100 text-white fw-bold"
-                      style={{ backgroundColor: "#ddb46b" }}
-                      // onClick={()=>{filterFlights(dep,arr);}}
-                      onClick={filterFlights}
-                    >
-                      Search
-                    </button>
-                  </div>
-                  <div>
-                    <button
-                      className="btn btn-danger w-100"
-                      onClick={handleReset}
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )} */}
-
             <div className="table-div">
               {getBookingDataFilter.length <= 0 ? (
                 <p
@@ -530,325 +452,170 @@ const DashBoard = () => {
                 </p>
               ) : (
                 <>
-                  <div className="container p-3 resp_view_main_sec">
-                    <div className="row justify-content-start align-items-center">
-                      {selectedTab === "upcoming" && (
-                        <>
-                          {/* <div
-                            className="col-12 p-3 fs-5 mb-3 fw-bold"
-                            style={{ color: "#dbb46b" }}
-                          >
-                            Your Booking Details
-                          </div> */}
-                          {currentData.map((item, index) => {
-                            return (
-                              <div className="completedmaintab">
-                                <div className="completeheader">
-                                  <div className="row align-items-center justify-content-around gap-2 resp_dashboard">
-                                    <div className="col-lg-8 align-items-center d-flex resp_dashboard_inner">
-                                      <div className="row resp_dashboard_inner_first_part">
-                                        <div className="col-12 d-flex align-items-center gap-2 resp_justify_center">
-                                          <div className="completeFrom">
-                                            {item.departure_city}
-                                          </div>
-                                          <div className="">
-                                            <FaLongArrowAltRight />
-                                          </div>
-                                          <div className="completeFrom">
-                                            {item.arrival_city}
-                                          </div>
-                                        </div>
-                                        <div className="col-12 d-flex flex-column flex-lg-row align-items-center gap-lg-3 gap-1 mt-2 resp_dashboard_inner_first resp_justify_center">
-                                          <div className="text-warning text-warning2">
-                                            Upcoming
-                                          </div>
-                                          <div className="dot_flex">
-                                            <div>
-                                              <GoDotFill />
-                                            </div>
-                                            {item.is_return == 0 ? (
-                                              <div className="fw-bold">
-                                                One Way
+                  {selectedTabMainHome === "flights" ? (
+                    <>
+                      <div className="container p-3 resp_view_main_sec">
+                        <div className="row justify-content-start align-items-center">
+                          {selectedTab === "upcoming" && (
+                            <>
+                              {currentData.map((item, index) => {
+                                return (
+                                  <div className="completedmaintab">
+                                    <div className="completeheader">
+                                      <div className="row align-items-center justify-content-around gap-2 resp_dashboard">
+                                        <div className="col-lg-8 align-items-center d-flex resp_dashboard_inner">
+                                          <div className="row resp_dashboard_inner_first_part">
+                                            <div className="col-12 d-flex align-items-center gap-2 resp_justify_center">
+                                              <div className="completeFrom">
+                                                {item.departure_city}
                                               </div>
-                                            ) : (
-                                              <div className="fw-bold">
-                                                Round Trip
+                                              <div className="">
+                                                <FaLongArrowAltRight />
                                               </div>
-                                            )}
-                                          </div>
-                                          <div className="dot_flex">
-                                            <div>
-                                              <GoDotFill />
+                                              <div className="completeFrom">
+                                                {item.arrival_city}
+                                              </div>
                                             </div>
-                                            <div className="text-secondary">
-                                              {item?.get_con === 0
-                                                ? "Booking ID - "
-                                                : "Reference ID - "}
-                                            </div>
-                                            <div className="text-secondary">
-                                              {item?.booking_id
-                                                ? item?.booking_id
-                                                : "N/A"}
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <div className="circlegol">
-                                          <img
-                                            className="complane"
-                                            src={images.planecompleted}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="col-lg-3 d-flex align-items-center justify-content-center">
-                                      <Link
-                                        to={"/ViewBooking"}
-                                        // onClick={BookingDetails}
-                                        state={{ item }}
-                                        className="completeViewBokingbtn"
-                                      >
-                                        View Booking
-                                      </Link>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="completesection">
-                                  <div className="row w-100 align-items-center justify-content-between resp_ticket_detail_dash">
-                                    <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
-                                      <div className="text-secondary">From</div>
-                                      <div className="completedDate">
-                                        {moment(item.departure_date).format(
-                                          "DD MMM'YY"
-                                        )}{" "}
-                                        <span className="text-secondary fw-light completedTime">
-                                          {item.departure_time}
-                                        </span>
-                                      </div>
-                                      <div className="d-flex gap-3">
-                                        <div className="fw-bold">
-                                          {item.departure_city}
-                                        </div>
-                                        <div className="text-muted">
-                                          {item.terminal}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
-                                      <div className="text-secondary from_min_width">
-                                        To
-                                      </div>
-                                      <div className="completedDate">
-                                        {moment(item.arrival_date).format(
-                                          "DD MMM'YY"
-                                        )}{" "}
-                                        <span className="text-secondary fw-light completedTime">
-                                          {item.arrival_time}
-                                        </span>
-                                      </div>
-                                      <div className="d-flex gap-3">
-                                        <div className="fw-bold">
-                                          {item.arrival_city}
-                                        </div>
-                                        <div className="text-muted">
-                                          {item.terminal}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="col-lg-3 d-flex flex-column align-items-start resp_dashboard_ticket_short_detail_icon_flex">
-                                      <div className="d-flex flex-row gap-3 mb-2">
-                                        <GiCommercialAirplane size={19} />
-                                        <div>{item.airline_name}</div>
-                                      </div>
-                                      {item?.child?.length > 0 && (
-                                        <div className="d-flex flex-row gap-3 align-items-center">
-                                          <FaUser size={19} />
-                                          <div>
-                                            {item.child[0].first_name}{" "}
-                                            {item.child[0].last_name}{" "}
-                                            {item.child.length > 1 && (
-                                              <span>
-                                                +{item.child.length - 1}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="col-lg-3 d-flex flex-column text-center">
-                                      <div>
-                                        {(() => {
-                                          const airline = item.airline_name;
+                                            <div className="col-12 d-flex flex-column flex-lg-row align-items-center gap-lg-3 gap-1 mt-2 resp_dashboard_inner_first resp_justify_center">
+                                              <div className="text-warning text-warning2">
+                                                Upcoming
+                                              </div>
+                                              {selectedTabMainHome ===
+                                              "flights" ? (
+                                                <>
+                                                  <div className="dot_flex">
+                                                    <div>
+                                                      <GoDotFill />
+                                                    </div>
+                                                    {item.is_return == 0 ? (
+                                                      <div className="fw-bold">
+                                                        One Way
+                                                      </div>
+                                                    ) : (
+                                                      <div className="fw-bold">
+                                                        Round Trip
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </>
+                                              ) : (
+                                                <></>
+                                              )}
 
-                                          return airline ===
-                                            "IndiGo Airlines" ||
-                                            airline === "IndiGo" ? (
-                                            <img
-                                              src={images.IndiGoAirlines_logo}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : airline === "Neos" ? (
-                                            <img
-                                              src={images.neoslogo}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : airline === "SpiceJet" ? (
-                                            <img
-                                              src={images.spicejet}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : airline === "Air India" ? (
-                                            <img
-                                              src={images.airindialogo}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : airline === "Akasa Air" ? (
-                                            <img
-                                              src={images.akasalogo}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : airline === "Etihad" ? (
-                                            <img
-                                              src={images.etihadlogo}
-                                              style={{
-                                                backgroundColor: "#fffbdb",
-                                                padding: "5px",
-                                                borderRadius: "5px",
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                              // className="airline_logo"
-                                            />
-                                          ) : airline === "Vistara" ? (
-                                            <img
-                                              src={images.vistaralogo}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : airline === "AirAsia X" ? (
-                                            <img
-                                              src={images.airasiax}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : airline === "AirAsia" ? (
-                                            <img
-                                              src={images.airasia}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : airline === "Azul" ? (
-                                            <img
-                                              src={images.azul}
-                                              // className="airline_logo"
-                                              style={{
-                                                width: "100px",
-                                                height: "50px",
-                                                objectFit: "contain",
-                                              }}
-                                            />
-                                          ) : (
-                                            <IoAirplaneSharp
-                                              size={40}
-                                              color="white"
-                                            />
-                                          );
-                                        })()}
+                                              {getBookingDataFilter ===
+                                              "flights" ? (
+                                                <>
+                                                  <div className="dot_flex">
+                                                    <div>
+                                                      <GoDotFill />
+                                                    </div>
+                                                    <div className="text-secondary">
+                                                      {item?.get_con === 0
+                                                        ? "Booking ID - "
+                                                        : "Reference ID - "}
+                                                    </div>
+                                                    <div className="text-secondary">
+                                                      {item?.booking_id
+                                                        ? item?.booking_id
+                                                        : "N/A"}
+                                                    </div>
+                                                  </div>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <div className="dot_flex">
+                                                    <div>
+                                                      <GoDotFill />
+                                                    </div>
+                                                    <div className="text-secondary">
+                                                      PNR No - &nbsp;
+                                                    </div>
+                                                    <div className="text-secondary">
+                                                      {item?.booking_id
+                                                        ? item?.booking_id
+                                                        : "N/A"}
+                                                    </div>
+                                                  </div>
+                                                </>
+                                              )}
+                                            </div>
+                                            <div className="circlegol">
+                                              {selectedTabMainHome ===
+                                              "flight" ? (
+                                                <>
+                                                  <img
+                                                    className="complane"
+                                                    src={images.planecompleted}
+                                                  />
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <LuBus size={25} />
+                                                </>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="col-lg-3 d-flex align-items-center justify-content-center">
+                                          <Link
+                                            to={"/ViewBooking"}
+                                            // onClick={BookingDetails}
+                                            state={{ item }}
+                                            className="completeViewBokingbtn"
+                                          >
+                                            View Booking
+                                          </Link>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                  {item.is_return === 1 && (
-                                    <>
-                                      <div className="row w-100 align-items-center justify-content-between ">
+                                    <div className="completesection">
+                                      <div className="row w-100 align-items-center justify-content-between resp_ticket_detail_dash">
                                         <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
                                           <div className="text-secondary">
                                             From
                                           </div>
                                           <div className="completedDate">
-                                            {moment(
-                                              item.return_departure_date
-                                            ).format("DD MMM'YY")}{" "}
+                                            {moment(item.departure_date).format(
+                                              "DD MMM'YY"
+                                            )}{" "}
                                             <span className="text-secondary fw-light completedTime">
-                                              {item.return_departure_time}
+                                              {item.departure_time}
                                             </span>
                                           </div>
                                           <div className="d-flex gap-3">
                                             <div className="fw-bold">
-                                              {item.return_departure_city}
+                                              {item.departure_city}
                                             </div>
                                             <div className="text-muted">
-                                              {item?.terminal
-                                                ? item.terminal
-                                                : "Terminal 1"}
+                                              {item.terminal}
                                             </div>
                                           </div>
                                         </div>
                                         <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
-                                          <div className="text-secondary">
+                                          <div className="text-secondary from_min_width">
                                             To
                                           </div>
                                           <div className="completedDate">
-                                            {moment(
-                                              item.return_arrival_date
-                                            ).format("DD MMM'YY")}{" "}
+                                            {moment(item.arrival_date).format(
+                                              "DD MMM'YY"
+                                            )}{" "}
                                             <span className="text-secondary fw-light completedTime">
-                                              {item.return_arrival_time}
+                                              {item.arrival_time}
                                             </span>
                                           </div>
                                           <div className="d-flex gap-3">
                                             <div className="fw-bold">
-                                              {item.return_arrival_city}
+                                              {item.arrival_city}
                                             </div>
                                             <div className="text-muted">
-                                              {item?.terminal
-                                                ? item.termial
-                                                : "Terminal 1"}
+                                              {item.terminal}
                                             </div>
                                           </div>
                                         </div>
-                                        <div className="col-lg-3 d-flex flex-row flex-lg-column align-items-start justify-content-center gap-5 gap-lg-0 align-items-lg-start ">
+                                        <div className="col-lg-3 d-flex flex-column align-items-start resp_dashboard_ticket_short_detail_icon_flex">
                                           <div className="d-flex flex-row gap-3 mb-2">
                                             <GiCommercialAirplane size={19} />
-                                            <div>
-                                              {item.return_airline_name}
-                                            </div>
+                                            <div>{item.airline_name}</div>
                                           </div>
                                           {item?.child?.length > 0 && (
                                             <div className="d-flex flex-row gap-3 align-items-center">
@@ -987,56 +754,230 @@ const DashBoard = () => {
                                           </div>
                                         </div>
                                       </div>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
+                                      {item.is_return === 1 && (
+                                        <>
+                                          <div className="row w-100 align-items-center justify-content-between ">
+                                            <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                              <div className="text-secondary">
+                                                From
+                                              </div>
+                                              <div className="completedDate">
+                                                {moment(
+                                                  item.return_departure_date
+                                                ).format("DD MMM'YY")}{" "}
+                                                <span className="text-secondary fw-light completedTime">
+                                                  {item.return_departure_time}
+                                                </span>
+                                              </div>
+                                              <div className="d-flex gap-3">
+                                                <div className="fw-bold">
+                                                  {item.return_departure_city}
+                                                </div>
+                                                <div className="text-muted">
+                                                  {item?.terminal
+                                                    ? item.terminal
+                                                    : "Terminal 1"}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                              <div className="text-secondary">
+                                                To
+                                              </div>
+                                              <div className="completedDate">
+                                                {moment(
+                                                  item.return_arrival_date
+                                                ).format("DD MMM'YY")}{" "}
+                                                <span className="text-secondary fw-light completedTime">
+                                                  {item.return_arrival_time}
+                                                </span>
+                                              </div>
+                                              <div className="d-flex gap-3">
+                                                <div className="fw-bold">
+                                                  {item.return_arrival_city}
+                                                </div>
+                                                <div className="text-muted">
+                                                  {item?.terminal
+                                                    ? item.termial
+                                                    : "Terminal 1"}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="col-lg-3 d-flex flex-row flex-lg-column align-items-start justify-content-center gap-5 gap-lg-0 align-items-lg-start ">
+                                              <div className="d-flex flex-row gap-3 mb-2">
+                                                <GiCommercialAirplane
+                                                  size={19}
+                                                />
+                                                <div>
+                                                  {item.return_airline_name}
+                                                </div>
+                                              </div>
+                                              {item?.child?.length > 0 && (
+                                                <div className="d-flex flex-row gap-3 align-items-center">
+                                                  <FaUser size={19} />
+                                                  <div>
+                                                    {item.child[0].first_name}{" "}
+                                                    {item.child[0].last_name}{" "}
+                                                    {item.child.length > 1 && (
+                                                      <span>
+                                                        +{item.child.length - 1}
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className="col-lg-3 d-flex flex-column text-center">
+                                              <div>
+                                                {(() => {
+                                                  const airline =
+                                                    item.airline_name;
 
-                      {selectedTab === "CANCELLED" && (
-                        <>
-                          <div className="row my-3 align-items-center justify-content-center">
-                            <div className="col-lg-4 d-flex align-items-center justify-content-center">
-                              <img
-                                src={images.cancelledempty}
-                                className="tabcancelledempty"
-                              />
-                            </div>
-                            <div className="col-12 text-center text-lg-start col-lg-6 mt-4 mt-lg-0">
-                              <div className="emptytxtboldbig">
-                                Looks empty, you've no cancelled bookings.
-                              </div>
-                              <div className="emptytxtregular">
-                                There is no Cancelled Ticket{" "}
-                              </div>
-                              <Link className="plan-trip-btn" to={"/"}>
-                                Plan a Trip
-                              </Link>
-                            </div>
-                          </div>
-                        </>
-                      )}
+                                                  return airline ===
+                                                    "IndiGo Airlines" ||
+                                                    airline === "IndiGo" ? (
+                                                    <img
+                                                      src={
+                                                        images.IndiGoAirlines_logo
+                                                      }
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "Neos" ? (
+                                                    <img
+                                                      src={images.neoslogo}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "SpiceJet" ? (
+                                                    <img
+                                                      src={images.spicejet}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline ===
+                                                    "Air India" ? (
+                                                    <img
+                                                      src={images.airindialogo}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline ===
+                                                    "Akasa Air" ? (
+                                                    <img
+                                                      src={images.akasalogo}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "Etihad" ? (
+                                                    <img
+                                                      src={images.etihadlogo}
+                                                      style={{
+                                                        backgroundColor:
+                                                          "#fffbdb",
+                                                        padding: "5px",
+                                                        borderRadius: "5px",
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                      // className="airline_logo"
+                                                    />
+                                                  ) : airline === "Vistara" ? (
+                                                    <img
+                                                      src={images.vistaralogo}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline ===
+                                                    "AirAsia X" ? (
+                                                    <img
+                                                      src={images.airasiax}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "AirAsia" ? (
+                                                    <img
+                                                      src={images.airasia}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "Azul" ? (
+                                                    <img
+                                                      src={images.azul}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : (
+                                                    <IoAirplaneSharp
+                                                      size={40}
+                                                      color="white"
+                                                    />
+                                                  );
+                                                })()}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          )}
 
-                      {selectedTab === "completed" && (
-                        <>
-                          {currentData.length <= 0 ? (
+                          {selectedTab === "CANCELLED" && (
                             <>
                               <div className="row my-3 align-items-center justify-content-center">
                                 <div className="col-lg-4 d-flex align-items-center justify-content-center">
                                   <img
-                                    src={images.completeempty}
+                                    src={images.cancelledempty}
                                     className="tabcancelledempty"
                                   />
                                 </div>
                                 <div className="col-12 text-center text-lg-start col-lg-6 mt-4 mt-lg-0">
                                   <div className="emptytxtboldbig">
-                                    Looks empty, you've no Completed bookings.
+                                    Looks empty, you've no cancelled bookings.
                                   </div>
                                   <div className="emptytxtregular">
-                                    There is no Completed Ticket{" "}
+                                    There is no Cancelled Ticket{" "}
                                   </div>
                                   <Link className="plan-trip-btn" to={"/"}>
                                     Plan a Trip
@@ -1044,321 +985,198 @@ const DashBoard = () => {
                                 </div>
                               </div>
                             </>
-                          ) : (
-                            <>
-                              {currentData.map((item, index) => {
-                                return (
-                                  <>
-                                    <div className="completedmaintab">
-                                      <div className="completeheader">
-                                        <div className="row align-items-center justify-content-around gap-2 resp_dashboard">
-                                          <div className="col-lg-8 align-items-center d-flex resp_dashboard_inner">
-                                            <div className="row resp_dashboard_inner_first_part">
-                                              <div className="col-12 d-flex align-items-center gap-2 resp_justify_center">
-                                                <div className="completeFrom">
-                                                  {item.departure_city}
-                                                </div>
-                                                <div className="">
-                                                  <FaLongArrowAltRight />
-                                                </div>
-                                                <div className="completeFrom">
-                                                  {item.arrival_city}
-                                                </div>
-                                              </div>
-                                              <div className="col-12 d-flex flex-column flex-lg-row align-items-center gap-lg-3 gap-1 mt-2 resp_dashboard_inner_first resp_justify_center">
-                                                <div className="text-warning text-warning2">
-                                                  Upcoming
-                                                </div>
-                                                <div className="dot_flex">
-                                                  <div>
-                                                    <GoDotFill />
-                                                  </div>
-                                                  {item.is_return == 0 ? (
-                                                    <div className="fw-bold">
-                                                      One Way
-                                                    </div>
-                                                  ) : (
-                                                    <div className="fw-bold">
-                                                      Round Trip
-                                                    </div>
-                                                  )}
-                                                </div>
-                                                <div className="dot_flex">
-                                                  <div>
-                                                    <GoDotFill />
-                                                  </div>
-                                                  <div className="text-secondary">
-                                                    Booking ID -
-                                                  </div>
-                                                  <div className="text-secondary">
-                                                    GDLAEF98532
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              <div className="circlegol">
-                                                <img
-                                                  className="complane"
-                                                  src={images.planecompleted}
-                                                />
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <div className="col-lg-3 d-flex align-items-center justify-content-center">
-                                            <Link
-                                              to={"/ViewBooking"}
-                                              state={{ item }}
-                                              className="completeViewBokingbtn"
-                                            >
-                                              View Booking
-                                            </Link>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="completesection">
-                                        <div className="row w-100 align-items-center justify-content-between resp_ticket_detail_dash">
-                                          <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
-                                            <div className="text-secondary">
-                                              From
-                                            </div>
-                                            <div className="completedDate">
-                                              {moment(
-                                                item.departure_date
-                                              ).format("DD MMM'YY")}{" "}
-                                              <span className="text-secondary fw-light completedTime">
-                                                {item.departure_time}
-                                              </span>
-                                            </div>
-                                            <div className="d-flex gap-3">
-                                              <div className="fw-bold">
-                                                {item.departure_city}
-                                              </div>
-                                              <div className="text-muted">
-                                                {item.terminal}
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
-                                            <div className="text-secondary from_min_width">
-                                              To
-                                            </div>
-                                            <div className="completedDate">
-                                              {moment(item.arrival_date).format(
-                                                "DD MMM'YY"
-                                              )}{" "}
-                                              <span className="text-secondary fw-light completedTime">
-                                                {item.arrival_time}
-                                              </span>
-                                            </div>
-                                            <div className="d-flex gap-3">
-                                              <div className="fw-bold">
-                                                {item.arrival_city}
-                                              </div>
-                                              <div className="text-muted">
-                                                {item.terminal}
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <div className="col-lg-3 d-flex flex-column align-items-start resp_dashboard_ticket_short_detail_icon_flex">
-                                            <div className="d-flex flex-row gap-3 mb-2">
-                                              <GiCommercialAirplane size={19} />
-                                              <div>{item.airline_name}</div>
-                                            </div>
-                                            {item?.child?.length > 0 && (
-                                              <div className="d-flex flex-row gap-3 align-items-center">
-                                                <FaUser size={19} />
-                                                <div>
-                                                  {item.child[0].first_name}{" "}
-                                                  {item.child[0].last_name}{" "}
-                                                  {item.child.length > 1 && (
-                                                    <span>
-                                                      +{item.child.length - 1}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                          <div className="col-lg-3 d-flex flex-column text-center">
-                                            <div>
-                                              {(() => {
-                                                const airline =
-                                                  item.airline_name;
+                          )}
 
-                                                return airline ===
-                                                  "IndiGo Airlines" ||
-                                                  airline === "IndiGo" ? (
-                                                  <img
-                                                    src={
-                                                      images.IndiGoAirlines_logo
-                                                    }
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : airline === "Neos" ? (
-                                                  <img
-                                                    src={images.neoslogo}
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : airline === "SpiceJet" ? (
-                                                  <img
-                                                    src={images.spicejet}
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : airline === "Air India" ? (
-                                                  <img
-                                                    src={images.airindialogo}
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : airline === "Akasa Air" ? (
-                                                  <img
-                                                    src={images.akasalogo}
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : airline === "Etihad" ? (
-                                                  <img
-                                                    src={images.etihadlogo}
-                                                    style={{
-                                                      backgroundColor:
-                                                        "#fffbdb",
-                                                      padding: "5px",
-                                                      borderRadius: "5px",
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                    // className="airline_logo"
-                                                  />
-                                                ) : airline === "Vistara" ? (
-                                                  <img
-                                                    src={images.vistaralogo}
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : airline === "AirAsia X" ? (
-                                                  <img
-                                                    src={images.airasiax}
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : airline === "AirAsia" ? (
-                                                  <img
-                                                    src={images.airasia}
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : airline === "Azul" ? (
-                                                  <img
-                                                    src={images.azul}
-                                                    // className="airline_logo"
-                                                    style={{
-                                                      width: "100px",
-                                                      height: "50px",
-                                                      objectFit: "contain",
-                                                    }}
-                                                  />
-                                                ) : (
-                                                  <IoAirplaneSharp
-                                                    size={40}
-                                                    color="white"
-                                                  />
-                                                );
-                                              })()}
+                          {selectedTab === "completed" && (
+                            <>
+                              {currentData.length <= 0 ? (
+                                <>
+                                  <div className="row my-3 align-items-center justify-content-center">
+                                    <div className="col-lg-4 d-flex align-items-center justify-content-center">
+                                      <img
+                                        src={images.completeempty}
+                                        className="tabcancelledempty"
+                                      />
+                                    </div>
+                                    <div className="col-12 text-center text-lg-start col-lg-6 mt-4 mt-lg-0">
+                                      <div className="emptytxtboldbig">
+                                        Looks empty, you've no Completed
+                                        bookings.
+                                      </div>
+                                      <div className="emptytxtregular">
+                                        There is no Completed Ticket{" "}
+                                      </div>
+                                      <Link className="plan-trip-btn" to={"/"}>
+                                        Plan a Trip
+                                      </Link>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {currentData.map((item, index) => {
+                                    return (
+                                      <>
+                                        <div className="completedmaintab">
+                                          <div className="completeheader">
+                                            <div className="row align-items-center justify-content-around gap-2 resp_dashboard">
+                                              <div className="col-lg-8 align-items-center d-flex resp_dashboard_inner">
+                                                <div className="row resp_dashboard_inner_first_part">
+                                                  <div className="col-12 d-flex align-items-center gap-2 resp_justify_center">
+                                                    <div className="completeFrom">
+                                                      {item.departure_city}
+                                                    </div>
+                                                    <div className="">
+                                                      <FaLongArrowAltRight />
+                                                    </div>
+                                                    <div className="completeFrom">
+                                                      {item.arrival_city}
+                                                    </div>
+                                                  </div>
+                                                  <div className="col-12 d-flex flex-column flex-lg-row align-items-center gap-lg-3 gap-1 mt-2 resp_dashboard_inner_first resp_justify_center">
+                                                    <div className="text-warning text-warning2">
+                                                      Upcoming
+                                                    </div>
+                                                    {selectedTabMainHome ===
+                                                    "flights" ? (
+                                                      <>
+                                                        <div className="dot_flex">
+                                                          <div>
+                                                            <GoDotFill />
+                                                          </div>
+                                                          {item.is_return ==
+                                                          0 ? (
+                                                            <div className="fw-bold">
+                                                              One Way
+                                                            </div>
+                                                          ) : (
+                                                            <div className="fw-bold">
+                                                              Round Trip
+                                                            </div>
+                                                          )}
+                                                        </div>
+                                                      </>
+                                                    ) : (
+                                                      <></>
+                                                    )}
+
+                                                    {getBookingDataFilter ===
+                                                    "flights" ? (
+                                                      <>
+                                                        <div className="dot_flex">
+                                                          <div>
+                                                            <GoDotFill />
+                                                          </div>
+                                                          <div className="text-secondary">
+                                                            {item?.get_con === 0
+                                                              ? "Booking ID - "
+                                                              : "Reference ID - "}
+                                                          </div>
+                                                          <div className="text-secondary">
+                                                            {item?.booking_id
+                                                              ? item?.booking_id
+                                                              : "N/A"}
+                                                          </div>
+                                                        </div>
+                                                      </>
+                                                    ) : (
+                                                      <>
+                                                        <div className="dot_flex">
+                                                          <div>
+                                                            <GoDotFill />
+                                                          </div>
+                                                          <div className="text-secondary">
+                                                            PNR No - &nbsp;
+                                                          </div>
+                                                          <div className="text-secondary">
+                                                            {item?.booking_id
+                                                              ? item?.booking_id
+                                                              : "N/A"}
+                                                          </div>
+                                                        </div>
+                                                      </>
+                                                    )}
+                                                  </div>
+                                                  <div className="circlegol">
+                                                    {selectedTabMainHome ===
+                                                    "flight" ? (
+                                                      <>
+                                                        <img
+                                                          className="complane"
+                                                          src={
+                                                            images.planecompleted
+                                                          }
+                                                        />
+                                                      </>
+                                                    ) : (
+                                                      <>
+                                                        <LuBus size={25} />
+                                                      </>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              <div className="col-lg-3 d-flex align-items-center justify-content-center">
+                                                <Link
+                                                  to={"/ViewBooking"}
+                                                  state={{ item }}
+                                                  className="completeViewBokingbtn"
+                                                >
+                                                  View Booking
+                                                </Link>
+                                              </div>
                                             </div>
                                           </div>
-                                        </div>
-                                        {item.is_return === 1 && (
-                                          <>
-                                            <div className="row w-100 align-items-center justify-content-between ">
+                                          <div className="completesection">
+                                            <div className="row w-100 align-items-center justify-content-between resp_ticket_detail_dash">
                                               <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
                                                 <div className="text-secondary">
                                                   From
                                                 </div>
                                                 <div className="completedDate">
                                                   {moment(
-                                                    item.return_departure_date
+                                                    item.departure_date
                                                   ).format("DD MMM'YY")}{" "}
                                                   <span className="text-secondary fw-light completedTime">
-                                                    {item.return_departure_time}
+                                                    {item.departure_time}
                                                   </span>
                                                 </div>
                                                 <div className="d-flex gap-3">
                                                   <div className="fw-bold">
-                                                    {item.return_departure_city}
+                                                    {item.departure_city}
                                                   </div>
                                                   <div className="text-muted">
-                                                    {item?.terminal
-                                                      ? item.terminal
-                                                      : "Terminal 1"}
+                                                    {item.terminal}
                                                   </div>
                                                 </div>
                                               </div>
                                               <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
-                                                <div className="text-secondary">
+                                                <div className="text-secondary from_min_width">
                                                   To
                                                 </div>
                                                 <div className="completedDate">
                                                   {moment(
-                                                    item.return_arrival_date
+                                                    item.arrival_date
                                                   ).format("DD MMM'YY")}{" "}
                                                   <span className="text-secondary fw-light completedTime">
-                                                    {item.return_arrival_time}
+                                                    {item.arrival_time}
                                                   </span>
                                                 </div>
                                                 <div className="d-flex gap-3">
                                                   <div className="fw-bold">
-                                                    {item.return_arrival_city}
+                                                    {item.arrival_city}
                                                   </div>
                                                   <div className="text-muted">
-                                                    {item?.terminal
-                                                      ? item.termial
-                                                      : "Terminal 1"}
+                                                    {item.terminal}
                                                   </div>
                                                 </div>
                                               </div>
-                                              <div className="col-lg-3 d-flex flex-column align-items-start">
+                                              <div className="col-lg-3 d-flex flex-column align-items-start resp_dashboard_ticket_short_detail_icon_flex">
                                                 <div className="d-flex flex-row gap-3 mb-2">
                                                   <GiCommercialAirplane
                                                     size={19}
                                                   />
-                                                  <div>
-                                                    {item.return_airline_name}
-                                                  </div>
+                                                  <div>{item.airline_name}</div>
                                                 </div>
                                                 {item?.child?.length > 0 && (
                                                   <div className="d-flex flex-row gap-3 align-items-center">
@@ -1510,68 +1328,1484 @@ const DashBoard = () => {
                                                 </div>
                                               </div>
                                             </div>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </>
-                                );
-                              })}
+                                            {item.is_return === 1 && (
+                                              <>
+                                                <div className="row w-100 align-items-center justify-content-between ">
+                                                  <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                                    <div className="text-secondary">
+                                                      From
+                                                    </div>
+                                                    <div className="completedDate">
+                                                      {moment(
+                                                        item.return_departure_date
+                                                      ).format(
+                                                        "DD MMM'YY"
+                                                      )}{" "}
+                                                      <span className="text-secondary fw-light completedTime">
+                                                        {
+                                                          item.return_departure_time
+                                                        }
+                                                      </span>
+                                                    </div>
+                                                    <div className="d-flex gap-3">
+                                                      <div className="fw-bold">
+                                                        {
+                                                          item.return_departure_city
+                                                        }
+                                                      </div>
+                                                      <div className="text-muted">
+                                                        {item?.terminal
+                                                          ? item.terminal
+                                                          : "Terminal 1"}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                                    <div className="text-secondary">
+                                                      To
+                                                    </div>
+                                                    <div className="completedDate">
+                                                      {moment(
+                                                        item.return_arrival_date
+                                                      ).format(
+                                                        "DD MMM'YY"
+                                                      )}{" "}
+                                                      <span className="text-secondary fw-light completedTime">
+                                                        {
+                                                          item.return_arrival_time
+                                                        }
+                                                      </span>
+                                                    </div>
+                                                    <div className="d-flex gap-3">
+                                                      <div className="fw-bold">
+                                                        {
+                                                          item.return_arrival_city
+                                                        }
+                                                      </div>
+                                                      <div className="text-muted">
+                                                        {item?.terminal
+                                                          ? item.termial
+                                                          : "Terminal 1"}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <div className="col-lg-3 d-flex flex-column align-items-start">
+                                                    <div className="d-flex flex-row gap-3 mb-2">
+                                                      <GiCommercialAirplane
+                                                        size={19}
+                                                      />
+                                                      <div>
+                                                        {
+                                                          item.return_airline_name
+                                                        }
+                                                      </div>
+                                                    </div>
+                                                    {item?.child?.length >
+                                                      0 && (
+                                                      <div className="d-flex flex-row gap-3 align-items-center">
+                                                        <FaUser size={19} />
+                                                        <div>
+                                                          {
+                                                            item.child[0]
+                                                              .first_name
+                                                          }{" "}
+                                                          {
+                                                            item.child[0]
+                                                              .last_name
+                                                          }{" "}
+                                                          {item.child.length >
+                                                            1 && (
+                                                            <span>
+                                                              +
+                                                              {item.child
+                                                                .length - 1}
+                                                            </span>
+                                                          )}
+                                                        </div>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                  <div className="col-lg-3 d-flex flex-column text-center">
+                                                    <div>
+                                                      {(() => {
+                                                        const airline =
+                                                          item.airline_name;
+
+                                                        return airline ===
+                                                          "IndiGo Airlines" ||
+                                                          airline ===
+                                                            "IndiGo" ? (
+                                                          <img
+                                                            src={
+                                                              images.IndiGoAirlines_logo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Neos" ? (
+                                                          <img
+                                                            src={
+                                                              images.neoslogo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "SpiceJet" ? (
+                                                          <img
+                                                            src={
+                                                              images.spicejet
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Air India" ? (
+                                                          <img
+                                                            src={
+                                                              images.airindialogo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Akasa Air" ? (
+                                                          <img
+                                                            src={
+                                                              images.akasalogo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Etihad" ? (
+                                                          <img
+                                                            src={
+                                                              images.etihadlogo
+                                                            }
+                                                            style={{
+                                                              backgroundColor:
+                                                                "#fffbdb",
+                                                              padding: "5px",
+                                                              borderRadius:
+                                                                "5px",
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                            // className="airline_logo"
+                                                          />
+                                                        ) : airline ===
+                                                          "Vistara" ? (
+                                                          <img
+                                                            src={
+                                                              images.vistaralogo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "AirAsia X" ? (
+                                                          <img
+                                                            src={
+                                                              images.airasiax
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "AirAsia" ? (
+                                                          <img
+                                                            src={images.airasia}
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Azul" ? (
+                                                          <img
+                                                            src={images.azul}
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : (
+                                                          <IoAirplaneSharp
+                                                            size={40}
+                                                            color="white"
+                                                          />
+                                                        );
+                                                      })()}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </>
+                                    );
+                                  })}
+                                </>
+                              )}
                             </>
                           )}
-                        </>
-                      )}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="container p-3 resp_view_main_sec">
+                        <div className="row justify-content-start align-items-center">
+                          {selectedTab === "upcoming" && (
+                            <>
+                              {currentData.length <= 0 ? (
+                                <>
+                                  <div className="row my-3 align-items-center justify-content-center">
+                                    <div className="col-lg-4 d-flex align-items-center justify-content-center">
+                                      <img
+                                        src={images.completeempty}
+                                        className="tabcancelledempty"
+                                      />
+                                    </div>
+                                    <div className="col-12 text-center text-lg-start col-lg-6 mt-4 mt-lg-0">
+                                      <div className="emptytxtboldbig">
+                                        Looks empty, you've no Upcoming
+                                        bookings.
+                                      </div>
+                                      <div className="emptytxtregular">
+                                        There is no Upcoming Ticket{" "}
+                                      </div>
+                                      <Link className="plan-trip-btn" to={"/"}>
+                                        Plan a Trip
+                                      </Link>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {currentData.map((item, index) => {
+                                    return (
+                                      <div className="completedmaintab">
+                                        <div className="completeheader">
+                                          <div className="row align-items-center justify-content-around gap-2 resp_dashboard">
+                                            <div className="col-lg-8 align-items-center d-flex resp_dashboard_inner">
+                                              <div className="row resp_dashboard_inner_first_part">
+                                                <div className="col-12 d-flex align-items-center gap-2 resp_justify_center">
+                                                  <div className="completeFrom">
+                                                    {item.departure_city
+                                                      ? item.departure_city
+                                                      : "N/A"}
+                                                  </div>
+                                                  <div className="">
+                                                    <FaLongArrowAltRight />
+                                                  </div>
+                                                  <div className="completeFrom">
+                                                    {item.arrival_city
+                                                      ? item.arrival_city
+                                                      : "N/A"}
+                                                  </div>
+                                                </div>
+                                                <div className="col-12 d-flex flex-column flex-lg-row align-items-center gap-lg-3 gap-1 mt-2 resp_dashboard_inner_first resp_justify_center">
+                                                  <div className="text-warning text-warning2">
+                                                    Upcoming
+                                                  </div>
+                                                  {selectedTabMainHome ===
+                                                  "flights" ? (
+                                                    <>
+                                                      <div className="dot_flex">
+                                                        <div>
+                                                          <GoDotFill />
+                                                        </div>
+                                                        {item.is_return == 0 ? (
+                                                          <div className="fw-bold">
+                                                            One Way
+                                                          </div>
+                                                        ) : (
+                                                          <div className="fw-bold">
+                                                            Round Trip
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                    </>
+                                                  ) : (
+                                                    <></>
+                                                  )}
+                                                  {getBookingDataFilter ===
+                                                  "flights" ? (
+                                                    <>
+                                                      <div className="dot_flex">
+                                                        <div>
+                                                          <GoDotFill />
+                                                        </div>
+                                                        <div className="text-secondary">
+                                                          {item?.get_con === 0
+                                                            ? "Booking ID - "
+                                                            : "Reference ID - "}
+                                                        </div>
+                                                        <div className="text-secondary">
+                                                          {item?.booking_id
+                                                            ? item?.booking_id
+                                                            : "N/A"}
+                                                        </div>
+                                                      </div>
+                                                    </>
+                                                  ) : (
+                                                    <></>
+                                                  )}
+                                                </div>
+                                                <div className="circlegol">
+                                                  {selectedTabMainHome ===
+                                                  "flight" ? (
+                                                    <>
+                                                      <img
+                                                        className="complane"
+                                                        src={
+                                                          images.planecompleted
+                                                        }
+                                                      />
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      <LuBus size={25} />
+                                                    </>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="col-lg-3 d-flex align-items-center justify-content-center">
+                                              <Link
+                                                to={"/ViewBooking"}
+                                                onClick={() => {
+                                                  handleViewBookingBus(
+                                                    item?.PNRNO
+                                                  );
+                                                }}
+                                                state={{ item }}
+                                                className="completeViewBokingbtn"
+                                              >
+                                                View Booking
+                                              </Link>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="completesection">
+                                          <div className="row w-100 align-items-center justify-content-between resp_ticket_detail_dash">
+                                            <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                              <div className="text-secondary">
+                                                From
+                                              </div>
+                                              <div className="completedDate">
+                                                {moment(
+                                                  item.departure_date
+                                                ).format("DD MMM'YY")}{" "}
+                                                <span className="text-secondary fw-light completedTime">
+                                                  {item.departure_time}
+                                                </span>
+                                              </div>
+                                              <div className="d-flex gap-3">
+                                                <div className="fw-bold">
+                                                  {item.departure_city
+                                                    ? item.departure_city
+                                                    : "N/A"}
+                                                </div>
+                                                <div className="text-muted">
+                                                  {item.terminal}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                              <div className="text-secondary from_min_width">
+                                                To
+                                              </div>
+                                              <div className="completedDate">
+                                                {moment(
+                                                  item.arrival_date
+                                                ).format("DD MMM'YY")}{" "}
+                                                <span className="text-secondary fw-light completedTime">
+                                                  {item.arrival_time}
+                                                </span>
+                                              </div>
+                                              <div className="d-flex gap-3">
+                                                <div className="fw-bold">
+                                                  {item.arrival_city
+                                                    ? item.arrival_city
+                                                    : "N/A"}
+                                                </div>
+                                                <div className="text-muted">
+                                                  {item.terminal}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="col-lg-3 d-flex flex-column align-items-start resp_dashboard_ticket_short_detail_icon_flex">
+                                              <div className="d-flex flex-row gap-3 mb-2">
+                                                <LuBus size={19} />
+                                                <div>Eagle Travels</div>
+                                              </div>
+                                              {item?.child?.length > 0 && (
+                                                <div className="d-flex flex-row gap-3 align-items-center">
+                                                  <FaUser size={19} />
+                                                  <div>
+                                                    {item.child[0].paxName}{" "}
+                                                    {item.child[0].last_name}{" "}
+                                                    {item.child.length > 1 && (
+                                                      <span>
+                                                        +{item.child.length - 1}
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className="col-lg-3 d-flex flex-column text-center">
+                                              <div>
+                                                {(() => {
+                                                  const airline =
+                                                    item.airline_name;
+
+                                                  return airline ===
+                                                    "IndiGo Airlines" ||
+                                                    airline === "IndiGo" ? (
+                                                    <img
+                                                      src={
+                                                        images.IndiGoAirlines_logo
+                                                      }
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "Neos" ? (
+                                                    <img
+                                                      src={images.neoslogo}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "SpiceJet" ? (
+                                                    <img
+                                                      src={images.spicejet}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline ===
+                                                    "Air India" ? (
+                                                    <img
+                                                      src={images.airindialogo}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline ===
+                                                    "Akasa Air" ? (
+                                                    <img
+                                                      src={images.akasalogo}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "Etihad" ? (
+                                                    <img
+                                                      src={images.etihadlogo}
+                                                      style={{
+                                                        backgroundColor:
+                                                          "#fffbdb",
+                                                        padding: "5px",
+                                                        borderRadius: "5px",
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                      // className="airline_logo"
+                                                    />
+                                                  ) : airline === "Vistara" ? (
+                                                    <img
+                                                      src={images.vistaralogo}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline ===
+                                                    "AirAsia X" ? (
+                                                    <img
+                                                      src={images.airasiax}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "AirAsia" ? (
+                                                    <img
+                                                      src={images.airasia}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : airline === "Azul" ? (
+                                                    <img
+                                                      src={images.azul}
+                                                      // className="airline_logo"
+                                                      style={{
+                                                        width: "100px",
+                                                        height: "50px",
+                                                        objectFit: "contain",
+                                                      }}
+                                                    />
+                                                  ) : (
+                                                    <IoAirplaneSharp
+                                                      size={40}
+                                                      color="white"
+                                                    />
+                                                  );
+                                                })()}
+                                              </div>
+                                            </div>
+                                          </div>
+                                          {item.is_return === 1 && (
+                                            <>
+                                              <div className="row w-100 align-items-center justify-content-between ">
+                                                <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                                  <div className="text-secondary">
+                                                    From
+                                                  </div>
+                                                  <div className="completedDate">
+                                                    {moment(
+                                                      item.return_departure_date
+                                                    ).format("DD MMM'YY")}{" "}
+                                                    <span className="text-secondary fw-light completedTime">
+                                                      {
+                                                        item.return_departure_time
+                                                      }
+                                                    </span>
+                                                  </div>
+                                                  <div className="d-flex gap-3">
+                                                    <div className="fw-bold">
+                                                      {
+                                                        item.return_departure_city
+                                                      }
+                                                    </div>
+                                                    <div className="text-muted">
+                                                      {item?.terminal
+                                                        ? item.terminal
+                                                        : "Terminal 1"}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                                <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                                  <div className="text-secondary">
+                                                    To
+                                                  </div>
+                                                  <div className="completedDate">
+                                                    {moment(
+                                                      item.return_arrival_date
+                                                    ).format("DD MMM'YY")}{" "}
+                                                    <span className="text-secondary fw-light completedTime">
+                                                      {item.return_arrival_time}
+                                                    </span>
+                                                  </div>
+                                                  <div className="d-flex gap-3">
+                                                    <div className="fw-bold">
+                                                      {item.return_arrival_city}
+                                                    </div>
+                                                    <div className="text-muted">
+                                                      {item?.terminal
+                                                        ? item.termial
+                                                        : "Terminal 1"}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                                <div className="col-lg-3 d-flex flex-row flex-lg-column align-items-start justify-content-center gap-5 gap-lg-0 align-items-lg-start ">
+                                                  <div className="d-flex flex-row gap-3 mb-2">
+                                                    <GiCommercialAirplane
+                                                      size={19}
+                                                    />
+                                                    <div>
+                                                      {item.return_airline_name}
+                                                    </div>
+                                                  </div>
+                                                  {item?.child?.length > 0 && (
+                                                    <div className="d-flex flex-row gap-3 align-items-center">
+                                                      <FaUser size={19} />
+                                                      <div>
+                                                        {
+                                                          item.child[0]
+                                                            .first_name
+                                                        }{" "}
+                                                        {
+                                                          item.child[0]
+                                                            .last_name
+                                                        }{" "}
+                                                        {item.child.length >
+                                                          1 && (
+                                                          <span>
+                                                            +
+                                                            {item.child.length -
+                                                              1}
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                                <div className="col-lg-3 d-flex flex-column text-center">
+                                                  <div>
+                                                    {(() => {
+                                                      const airline =
+                                                        item.airline_name;
+
+                                                      return airline ===
+                                                        "IndiGo Airlines" ||
+                                                        airline === "IndiGo" ? (
+                                                        <img
+                                                          src={
+                                                            images.IndiGoAirlines_logo
+                                                          }
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : airline === "Neos" ? (
+                                                        <img
+                                                          src={images.neoslogo}
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : airline ===
+                                                        "SpiceJet" ? (
+                                                        <img
+                                                          src={images.spicejet}
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : airline ===
+                                                        "Air India" ? (
+                                                        <img
+                                                          src={
+                                                            images.airindialogo
+                                                          }
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : airline ===
+                                                        "Akasa Air" ? (
+                                                        <img
+                                                          src={images.akasalogo}
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : airline ===
+                                                        "Etihad" ? (
+                                                        <img
+                                                          src={
+                                                            images.etihadlogo
+                                                          }
+                                                          style={{
+                                                            backgroundColor:
+                                                              "#fffbdb",
+                                                            padding: "5px",
+                                                            borderRadius: "5px",
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                          // className="airline_logo"
+                                                        />
+                                                      ) : airline ===
+                                                        "Vistara" ? (
+                                                        <img
+                                                          src={
+                                                            images.vistaralogo
+                                                          }
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : airline ===
+                                                        "AirAsia X" ? (
+                                                        <img
+                                                          src={images.airasiax}
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : airline ===
+                                                        "AirAsia" ? (
+                                                        <img
+                                                          src={images.airasia}
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : airline === "Azul" ? (
+                                                        <img
+                                                          src={images.azul}
+                                                          // className="airline_logo"
+                                                          style={{
+                                                            width: "100px",
+                                                            height: "50px",
+                                                            objectFit:
+                                                              "contain",
+                                                          }}
+                                                        />
+                                                      ) : (
+                                                        <IoAirplaneSharp
+                                                          size={40}
+                                                          color="white"
+                                                        />
+                                                      );
+                                                    })()}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+                            </>
+                          )}
+
+                          {selectedTab === "CANCELLED" && (
+                            <>
+                              <div className="row my-3 align-items-center justify-content-center">
+                                <div className="col-lg-4 d-flex align-items-center justify-content-center">
+                                  <img
+                                    src={images.cancelledempty}
+                                    className="tabcancelledempty"
+                                  />
+                                </div>
+                                <div className="col-12 text-center text-lg-start col-lg-6 mt-4 mt-lg-0">
+                                  <div className="emptytxtboldbig">
+                                    Looks empty, you've no cancelled bookings.
+                                  </div>
+                                  <div className="emptytxtregular">
+                                    There is no Cancelled Ticket{" "}
+                                  </div>
+                                  <Link className="plan-trip-btn" to={"/"}>
+                                    Plan a Trip
+                                  </Link>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {selectedTab === "completed" && (
+                            <>
+                              {currentData.length <= 0 ? (
+                                <>
+                                  <div className="row my-3 align-items-center justify-content-center">
+                                    <div className="col-lg-4 d-flex align-items-center justify-content-center">
+                                      <img
+                                        src={images.completeempty}
+                                        className="tabcancelledempty"
+                                      />
+                                    </div>
+                                    <div className="col-12 text-center text-lg-start col-lg-6 mt-4 mt-lg-0">
+                                      <div className="emptytxtboldbig">
+                                        Looks empty, you've no Completed
+                                        bookings.
+                                      </div>
+                                      <div className="emptytxtregular">
+                                        There is no Completed Ticket{" "}
+                                      </div>
+                                      <Link className="plan-trip-btn" to={"/"}>
+                                        Plan a Trip
+                                      </Link>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {currentData.map((item, index) => {
+                                    return (
+                                      <>
+                                        <div className="completedmaintab">
+                                          <div className="completeheader">
+                                            <div className="row align-items-center justify-content-around gap-2 resp_dashboard">
+                                              <div className="col-lg-8 align-items-center d-flex resp_dashboard_inner">
+                                                <div className="row resp_dashboard_inner_first_part">
+                                                  <div className="col-12 d-flex align-items-center gap-2 resp_justify_center">
+                                                    <div className="completeFrom">
+                                                      {item.departure_city
+                                                        ? item.departure_city
+                                                        : "N/A"}
+                                                    </div>
+                                                    <div className="">
+                                                      <FaLongArrowAltRight />
+                                                    </div>
+                                                    <div className="completeFrom">
+                                                      {item.arrival_city
+                                                        ? item.arrival_city
+                                                        : "N/A"}
+                                                    </div>
+                                                  </div>
+                                                  <div className="col-12 d-flex flex-column flex-lg-row align-items-center gap-lg-3 gap-1 mt-2 resp_dashboard_inner_first resp_justify_center">
+                                                    <div className="text-warning text-warning2">
+                                                      Completed
+                                                    </div>
+                                                    {selectedTabMainHome ===
+                                                    "flights" ? (
+                                                      <>
+                                                        <div className="dot_flex">
+                                                          <div>
+                                                            <GoDotFill />
+                                                          </div>
+                                                          {item.is_return ==
+                                                          0 ? (
+                                                            <div className="fw-bold">
+                                                              One Way
+                                                            </div>
+                                                          ) : (
+                                                            <div className="fw-bold">
+                                                              Round Trip
+                                                            </div>
+                                                          )}
+                                                        </div>
+                                                      </>
+                                                    ) : (
+                                                      <></>
+                                                    )}
+                                                    {getBookingDataFilter ===
+                                                    "flights" ? (
+                                                      <>
+                                                        <div className="dot_flex">
+                                                          <div>
+                                                            <GoDotFill />
+                                                          </div>
+                                                          <div className="text-secondary">
+                                                            {item?.get_con === 0
+                                                              ? "Booking ID - "
+                                                              : "Reference ID - "}
+                                                          </div>
+                                                          <div className="text-secondary">
+                                                            {item?.booking_id
+                                                              ? item?.booking_id
+                                                              : "N/A"}
+                                                          </div>
+                                                        </div>
+                                                      </>
+                                                    ) : (
+                                                      <></>
+                                                    )}
+                                                  </div>
+                                                  <div className="circlegol">
+                                                    {selectedTabMainHome ===
+                                                    "flight" ? (
+                                                      <>
+                                                        <img
+                                                          className="complane"
+                                                          src={
+                                                            images.planecompleted
+                                                          }
+                                                        />
+                                                      </>
+                                                    ) : (
+                                                      <>
+                                                        <LuBus size={25} />
+                                                      </>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              <div className="col-lg-3 d-flex align-items-center justify-content-center">
+                                                <Link
+                                                  to={"/ViewBooking"}
+                                                  onClick={() => {
+                                                    handleViewBookingBus(
+                                                      item?.PNRNO
+                                                    );
+                                                  }}
+                                                  state={{ item }}
+                                                  className="completeViewBokingbtn"
+                                                >
+                                                  View Booking
+                                                </Link>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="completesection">
+                                            <div className="row w-100 align-items-center justify-content-between resp_ticket_detail_dash">
+                                              <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                                <div className="text-secondary">
+                                                  From
+                                                </div>
+                                                <div className="completedDate">
+                                                  {moment(
+                                                    item.departure_date
+                                                  ).format("DD MMM'YY")}{" "}
+                                                  <span className="text-secondary fw-light completedTime">
+                                                    {item.departure_time}
+                                                  </span>
+                                                </div>
+                                                <div className="d-flex gap-3">
+                                                  <div className="fw-bold">
+                                                    {item.departure_city
+                                                      ? item.departure_city
+                                                      : "N/A"}
+                                                  </div>
+                                                  <div className="text-muted">
+                                                    {item.terminal}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                                <div className="text-secondary from_min_width">
+                                                  To
+                                                </div>
+                                                <div className="completedDate">
+                                                  {moment(
+                                                    item.arrival_date
+                                                  ).format("DD MMM'YY")}{" "}
+                                                  <span className="text-secondary fw-light completedTime">
+                                                    {item.arrival_time}
+                                                  </span>
+                                                </div>
+                                                <div className="d-flex gap-3">
+                                                  <div className="fw-bold">
+                                                    {item.arrival_city
+                                                      ? item.arrival_city
+                                                      : "N/A"}
+                                                  </div>
+                                                  <div className="text-muted">
+                                                    {item.terminal}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              <div className="col-lg-3 d-flex flex-column align-items-start resp_dashboard_ticket_short_detail_icon_flex">
+                                                <div className="d-flex flex-row gap-3 mb-2">
+                                                  <LuBus size={19} />
+                                                  <div>Eagle Travels</div>
+                                                </div>
+                                                {item?.child?.length > 0 && (
+                                                  <div className="d-flex flex-row gap-3 align-items-center">
+                                                    <FaUser size={19} />
+                                                    <div>
+                                                      {item.child[0].paxName}{" "}
+                                                      {item.child[0].last_name}{" "}
+                                                      {item.child.length >
+                                                        1 && (
+                                                        <span>
+                                                          +
+                                                          {item.child.length -
+                                                            1}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div className="col-lg-3 d-flex flex-column text-center">
+                                                <div>
+                                                  {(() => {
+                                                    const airline =
+                                                      item.airline_name;
+
+                                                    return airline ===
+                                                      "IndiGo Airlines" ||
+                                                      airline === "IndiGo" ? (
+                                                      <img
+                                                        src={
+                                                          images.IndiGoAirlines_logo
+                                                        }
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : airline === "Neos" ? (
+                                                      <img
+                                                        src={images.neoslogo}
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : airline ===
+                                                      "SpiceJet" ? (
+                                                      <img
+                                                        src={images.spicejet}
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : airline ===
+                                                      "Air India" ? (
+                                                      <img
+                                                        src={
+                                                          images.airindialogo
+                                                        }
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : airline ===
+                                                      "Akasa Air" ? (
+                                                      <img
+                                                        src={images.akasalogo}
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : airline === "Etihad" ? (
+                                                      <img
+                                                        src={images.etihadlogo}
+                                                        style={{
+                                                          backgroundColor:
+                                                            "#fffbdb",
+                                                          padding: "5px",
+                                                          borderRadius: "5px",
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                        // className="airline_logo"
+                                                      />
+                                                    ) : airline ===
+                                                      "Vistara" ? (
+                                                      <img
+                                                        src={images.vistaralogo}
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : airline ===
+                                                      "AirAsia X" ? (
+                                                      <img
+                                                        src={images.airasiax}
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : airline ===
+                                                      "AirAsia" ? (
+                                                      <img
+                                                        src={images.airasia}
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : airline === "Azul" ? (
+                                                      <img
+                                                        src={images.azul}
+                                                        // className="airline_logo"
+                                                        style={{
+                                                          width: "100px",
+                                                          height: "50px",
+                                                          objectFit: "contain",
+                                                        }}
+                                                      />
+                                                    ) : (
+                                                      <IoAirplaneSharp
+                                                        size={40}
+                                                        color="white"
+                                                      />
+                                                    );
+                                                  })()}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            {item.is_return === 1 && (
+                                              <>
+                                                <div className="row w-100 align-items-center justify-content-between ">
+                                                  <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                                    <div className="text-secondary">
+                                                      From
+                                                    </div>
+                                                    <div className="completedDate">
+                                                      {moment(
+                                                        item.return_departure_date
+                                                      ).format(
+                                                        "DD MMM'YY"
+                                                      )}{" "}
+                                                      <span className="text-secondary fw-light completedTime">
+                                                        {
+                                                          item.return_departure_time
+                                                        }
+                                                      </span>
+                                                    </div>
+                                                    <div className="d-flex gap-3">
+                                                      <div className="fw-bold">
+                                                        {
+                                                          item.return_departure_city
+                                                        }
+                                                      </div>
+                                                      <div className="text-muted">
+                                                        {item?.terminal
+                                                          ? item.terminal
+                                                          : "Terminal 1"}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <div className="col-lg-3 d-flex flex-column resp_dashboard_ticket_short_detail_main">
+                                                    <div className="text-secondary">
+                                                      To
+                                                    </div>
+                                                    <div className="completedDate">
+                                                      {moment(
+                                                        item.return_arrival_date
+                                                      ).format(
+                                                        "DD MMM'YY"
+                                                      )}{" "}
+                                                      <span className="text-secondary fw-light completedTime">
+                                                        {
+                                                          item.return_arrival_time
+                                                        }
+                                                      </span>
+                                                    </div>
+                                                    <div className="d-flex gap-3">
+                                                      <div className="fw-bold">
+                                                        {
+                                                          item.return_arrival_city
+                                                        }
+                                                      </div>
+                                                      <div className="text-muted">
+                                                        {item?.terminal
+                                                          ? item.termial
+                                                          : "Terminal 1"}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <div className="col-lg-3 d-flex flex-column align-items-start">
+                                                    <div className="d-flex flex-row gap-3 mb-2">
+                                                      <GiCommercialAirplane
+                                                        size={19}
+                                                      />
+                                                      <div>
+                                                        {
+                                                          item.return_airline_name
+                                                        }
+                                                      </div>
+                                                    </div>
+                                                    {item?.child?.length >
+                                                      0 && (
+                                                      <div className="d-flex flex-row gap-3 align-items-center">
+                                                        <FaUser size={19} />
+                                                        <div>
+                                                          {
+                                                            item.child[0]
+                                                              .first_name
+                                                          }{" "}
+                                                          {
+                                                            item.child[0]
+                                                              .last_name
+                                                          }{" "}
+                                                          {item.child.length >
+                                                            1 && (
+                                                            <span>
+                                                              +
+                                                              {item.child
+                                                                .length - 1}
+                                                            </span>
+                                                          )}
+                                                        </div>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                  <div className="col-lg-3 d-flex flex-column text-center">
+                                                    <div>
+                                                      {(() => {
+                                                        const airline =
+                                                          item.airline_name;
+
+                                                        return airline ===
+                                                          "IndiGo Airlines" ||
+                                                          airline ===
+                                                            "IndiGo" ? (
+                                                          <img
+                                                            src={
+                                                              images.IndiGoAirlines_logo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Neos" ? (
+                                                          <img
+                                                            src={
+                                                              images.neoslogo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "SpiceJet" ? (
+                                                          <img
+                                                            src={
+                                                              images.spicejet
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Air India" ? (
+                                                          <img
+                                                            src={
+                                                              images.airindialogo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Akasa Air" ? (
+                                                          <img
+                                                            src={
+                                                              images.akasalogo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Etihad" ? (
+                                                          <img
+                                                            src={
+                                                              images.etihadlogo
+                                                            }
+                                                            style={{
+                                                              backgroundColor:
+                                                                "#fffbdb",
+                                                              padding: "5px",
+                                                              borderRadius:
+                                                                "5px",
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                            // className="airline_logo"
+                                                          />
+                                                        ) : airline ===
+                                                          "Vistara" ? (
+                                                          <img
+                                                            src={
+                                                              images.vistaralogo
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "AirAsia X" ? (
+                                                          <img
+                                                            src={
+                                                              images.airasiax
+                                                            }
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "AirAsia" ? (
+                                                          <img
+                                                            src={images.airasia}
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : airline ===
+                                                          "Azul" ? (
+                                                          <img
+                                                            src={images.azul}
+                                                            // className="airline_logo"
+                                                            style={{
+                                                              width: "100px",
+                                                              height: "50px",
+                                                              objectFit:
+                                                                "contain",
+                                                            }}
+                                                          />
+                                                        ) : (
+                                                          <IoAirplaneSharp
+                                                            size={40}
+                                                            color="white"
+                                                          />
+                                                        );
+                                                      })()}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </>
+                                    );
+                                  })}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </>
-                // <table className="table table-bordered">
-                //   <thead>
-                //     <tr>
-                //       <th className="text-white">S.No</th>
-                //       <th className="text-white">Flight Name</th>
-                //       <th className="text-white">Booking</th>
-                //       <th className="text-white">Booking Date</th>
-                //       <th className="text-white">No. of Persons</th>
-                //       <th className="text-white">Amount</th>
-                //       <th className="text-white">Action</th>
-                //     </tr>
-                //   </thead>
-                //   <tbody>
-                //     {currentData.map((item, index) => (
-                //       <tr
-                //         key={index}
-                //         style={{ borderBottom: "1px solid #ddb46b" }}
-                //       >
-                //         <td>{startIndex + index + 1}</td>
-                //         <td>{item.airline_name}</td>
-                //         <td>
-                //           {item.child[0].first_name} {item.child[0].last_name}
-                //         </td>
-                //         <td>{moment(item?.updated_at).format("DD-MM-YYYY")}</td>
-                //         <td>{item.total_travelers}</td>
-                //         <td>{item.total_amount}</td>
-                //         <td className="d-flex justify-content-around">
-                //           <FaInfoCircle
-                //             className="infobtn"
-                //             size={18}
-                //             onClick={() => {
-                //               openModal();
-                //               setModalData(item);
-                //             }}
-                //           />
-                //           <FaShareAlt
-                //             className="sharebtnhover"
-                //             size={18}
-                //             onClick={() => {
-                //               openModal2();
-                //               setModalData(item);
-                //             }}
-                //           />
-                //         </td>
-                //       </tr>
-                //     ))}
-                //   </tbody>
-                // </table>
               )}
               {selectedTab === "UPCOMING" && currentData.length > 0 && (
                 <div className="pagination">

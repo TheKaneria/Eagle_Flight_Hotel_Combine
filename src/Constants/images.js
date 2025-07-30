@@ -56,7 +56,16 @@ import flight5 from "../Assets/Generic_02_2x.png";
 import flight6 from "../Assets/Generic_01_1_5x.png";
 import header_image from "../Assets/header_bg.avif";
 import logo2 from "../Assets/logo2.jpeg";
+import bus1 from "../Assets/bus1.jpeg";
+import bus2 from "../Assets/bus2.jpg";
+import bus3 from "../Assets/bus3.jpg";
+import bus4 from "../Assets/bus4.jpeg";
+import header_bg_bus from "../Assets/header_bus_bg.jpg";
+import bgbus from "../Assets/bgbus.jpg";
+import eaglebus from "../Assets/eaglebus.png";
 
+import viewticketsvg from "../Assets/viewticketsvg.png";
+import brothers from "../Assets/brothers.jpg";
 
 export default {
   logo,
@@ -117,4 +126,14 @@ export default {
   flight6,
   header_image,
   logo2,
+  bus1,
+  bus2,
+  bus3,
+  bus4,
+  header_bg_bus,
+  bgbus,
+  eaglebus,
+
+  viewticketsvg,
+  brothers,
 };
