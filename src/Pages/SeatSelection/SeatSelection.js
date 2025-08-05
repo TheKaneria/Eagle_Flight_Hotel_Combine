@@ -3,7 +3,7 @@ import "./SeatSelection.css";
 import { PiSteeringWheelFill } from "react-icons/pi";
 import { toast } from "react-toastify";
 import TextField from "@mui/material/TextField";
-import { FaMale, FaFemale } from "react-icons/fa";
+import { FaMale, FaFemale, FaCircle, FaStopwatch } from "react-icons/fa";
 import Divider from "@mui/material/Divider";
 import Accordion from "@mui/material/Accordion";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -17,10 +17,20 @@ import Tooltip from "@mui/material/Tooltip";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   bookseat,
+  getRouteMiddleCitySequence,
   seararrangementdetails,
   verifyCall,
 } from "../../Utils/Constant";
 import { useBusContext } from "../../Context/bus_context";
+import Timeline from "@mui/lab/Timeline";
+import TimelineItem from "@mui/lab/TimelineItem";
+import TimelineSeparator from "@mui/lab/TimelineSeparator";
+import TimelineConnector from "@mui/lab/TimelineConnector";
+import TimelineContent from "@mui/lab/TimelineContent";
+import TimelineDot from "@mui/lab/TimelineDot";
+import TimelineOppositeContent, {
+  timelineOppositeContentClasses,
+} from "@mui/lab/TimelineOppositeContent";
 
 const seatTypes = [
   {
@@ -60,6 +70,24 @@ const seatTypes = [
   },
 ];
 
+const travelData = [
+  {
+    operator: "Shree Ramkrupa Travels",
+    busType: "Volvo 9600 A/C Seater (2+2)",
+    departureTime: "06:45",
+    departureDate: "02 Aug",
+    departurePoint: "Indira Circle",
+    departureAddress:
+      "Opp-Nakshtra Heights, Shree Ramkrupa Travels,150 feet ring road",
+    duration: "3h 15m",
+    arrivalTime: "10:00",
+    arrivalDate: "02 Aug",
+    arrivalPoint: "Shree Ramkrupa Travels, Narsang Tekri",
+    seatCount: 1,
+    seatNumbers: ["6"],
+  },
+];
+
 const SeatSelection = () => {
   const [selectedBoarding, setSelectedBoarding] = useState("");
   const [selectedDropping, setSelectedDropping] = useState("");
@@ -72,6 +100,7 @@ const SeatSelection = () => {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [userr, setUser] = useState("");
   const [login, SetLogin] = useState("");
+  const [timeLeft, setTimeLeft] = useState(null); // in seconds
 
   const navigate = useNavigate();
 
@@ -81,6 +110,8 @@ const SeatSelection = () => {
     GetBookSeatApi,
     book_seat_data,
     book_seat_data_loading,
+    GetRouteMiddleCitySequence,
+    route_middle_city_sequence,
   } = useBusContext();
 
   const location = useLocation();
@@ -92,18 +123,116 @@ const SeatSelection = () => {
     location.state?.bus?.ReferenceNumber || ""
   );
 
+  // console.log("bus", getBus);
+  // console.log("ka bhai Response", route_middle_city_sequence);
+
   useEffect(() => {
     var islogin = localStorage.getItem("is_login");
     SetLogin(islogin);
     var user = localStorage.getItem("is_user");
     setUser(JSON.parse(user));
+
+    GetmiddleCityroute();
   }, []);
+
+  const validatePassengerDetails = () => {
+    const errors = [];
+    const passengers = bussitting === 1 ? selected : selectedSeats;
+
+    passengers.forEach((seat, index) => {
+      const passenger = passengerDetails.find(
+        (p) => p.seatNumber === (bussitting === 1 ? seat.number : seat.seatNo)
+      ) || {
+        seatNumber: bussitting === 1 ? seat.number : seat.seatNo,
+        name: "",
+        age: "",
+        gender: seat.userGender || "",
+      };
+
+      const passengerErrors = {
+        seatNumber: passenger.seatNumber,
+        name: "",
+        age: "",
+        gender: "",
+      };
+
+      // Name validation: Must not be empty and contain only letters and spaces
+      if (!passenger.name || passenger.name.trim() === "") {
+        passengerErrors.name = `Passenger ${index + 1} (Seat ${
+          passenger.seatNumber
+        }): Name is required`;
+      } else if (!/^[a-zA-Z\s]+$/.test(passenger.name)) {
+        passengerErrors.name = `Passenger ${index + 1} (Seat ${
+          passenger.seatNumber
+        }): Name must contain only letters and spaces`;
+      }
+
+      // Age validation: Must be a number between 1 and 120
+      if (!passenger.age) {
+        passengerErrors.age = `Passenger ${index + 1} (Seat ${
+          passenger.seatNumber
+        }): Age is required`;
+      } else if (
+        !/^\d+$/.test(passenger.age) ||
+        passenger.age < 1 ||
+        passenger.age > 120
+      ) {
+        passengerErrors.age = `Passenger ${index + 1} (Seat ${
+          passenger.seatNumber
+        }): Age must be a number between 1 and 120`;
+      }
+
+      // Gender validation: Must be selected for non-reserved seats
+      if (!passenger.gender && seat.userGender !== "female") {
+        passengerErrors.gender = `Passenger ${index + 1} (Seat ${
+          passenger.seatNumber
+        }): Gender is required`;
+      }
+
+      // Add to errors array if there are validation issues
+      if (
+        passengerErrors.name ||
+        passengerErrors.age ||
+        passengerErrors.gender
+      ) {
+        errors.push(passengerErrors);
+      }
+    });
+
+    return errors;
+  };
 
   const handleConfirm = async () => {
     const token = JSON.parse(localStorage.getItem("is_token"));
-    if (!selectedBoarding || !selectedDropping) {
-      alert("Select boarding & dropping");
+
+    // Validate phone number
+    if (!phone) {
+      toast.warning("Please Enter Phone Number");
       return;
+    }
+
+    // Validate boarding and dropping points
+    if (!selectedBoarding || !selectedDropping) {
+      toast.warning("Please select boarding and dropping points");
+      return;
+    }
+
+    // Validate passenger details
+    const errors = validatePassengerDetails();
+    if (errors.length > 0) {
+      const firstError = errors[0]; // Only show errors for the first invalid passenger
+      if (firstError.name) {
+        toast.warning(firstError.name);
+        return;
+      }
+      if (firstError.age) {
+        toast.warning(firstError.age);
+        return;
+      }
+      if (firstError.gender) {
+        toast.warning(firstError.gender);
+        return;
+      }
     }
 
     const formdata = new FormData();
@@ -146,7 +275,6 @@ const SeatSelection = () => {
             }`;
           });
     formdata.append("seatNames", seatNames.join("|")); // Compulsory, in the format "1,M|2,F|3,M"
-
     formdata.append("email", email ? email : userr?.email); // Compulsory
     formdata.append("phone", phone); // Compulsory
 
@@ -207,8 +335,8 @@ const SeatSelection = () => {
       formdata.append(`paxDetails[${index}][baseFare]`, pax.baseFare);
     });
 
-    // Optional timestamp (based on current date and time: 04:03 PM IST, July 23, 2025)
-    formdata.append("bookingTime", "2025-07-23 16:03 IST"); // Add if required by API
+    // Optional timestamp (based on current date and time: 12:49 PM IST, July 30, 2025)
+    formdata.append("bookingTime", "2025-07-30 12:49 IST"); // Updated to current date and time
     formdata.append(
       "arrival_date",
       getBus?.ApproxArrival
@@ -256,11 +384,11 @@ const SeatSelection = () => {
       if (data) {
         console.log("Booking successful:", data);
         setIsExpanded(false);
-        // window.location.reload();
         navigate("/dashboard");
         window.scrollTo(0, 0);
       } else {
         console.log("No data received for booking");
+        toast.error("No data received from booking API");
       }
     } catch (error) {
       console.error("Error booking seat:", error);
@@ -313,7 +441,6 @@ const SeatSelection = () => {
     if (data) {
       console.log("bus seat arrangement data", data);
     } else {
-      console.log("No data received for referenceNumber:", referenceno);
     }
   };
 
@@ -716,6 +843,20 @@ const SeatSelection = () => {
     return require("../../Assets/greenseat.png");
   };
 
+  const GetmiddleCityroute = async () => {
+    // const token = JSON.parse(localStorage.getItem("is_token"));
+    const formdata = new FormData();
+    formdata.append("type", "POST");
+    formdata.append("url", getRouteMiddleCitySequence);
+    formdata.append("verifyCall", verifyCall);
+    formdata.append("companyID", getBus?.CompanyID);
+    formdata.append("routeID", getBus?.RouteID);
+    formdata.append("routeTimeID", getBus?.RouteTimeID);
+
+    const middledata = await GetRouteMiddleCitySequence(formdata);
+    // console.log("middle daata", middledata);
+  };
+
   useEffect(() => {
     window.scrollTo(0, 0);
     const handleKeyDown = (e) => {
@@ -728,7 +869,89 @@ const SeatSelection = () => {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  console.log("qwertyu", login);
+  const startCountdownTimer = () => {
+    setTimeLeft(180); // 3 minutes = 180 seconds
+  };
+  // useEffect(() => {
+  //   if (timeLeft === null) return;
+
+  //   if (timeLeft <= 0) {
+  //     setTimeLeft(null);
+  //     return;
+  //   }
+
+  //   const timer = setInterval(() => {
+  //     setTimeLeft((prev) => prev - 1);
+  //   }, 1000);
+
+  //   return () => clearInterval(timer);
+  // }, [timeLeft]);
+  const formatTime = (seconds) => {
+    const min = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const sec = String(seconds % 60).padStart(2, "0");
+    return `${min}:${sec}`;
+  };
+
+  const TravelCard = () => {
+    return (
+      <div className="card-container">
+        <div className="travel-card">
+          <div className="travel-header">
+            <h4 className="fw-bold">Eagle Travels</h4>
+            <div className="mt-1">{getBus?.BusTypeName}</div>
+          </div>
+          <Timeline
+            sx={{
+              [`& .${timelineOppositeContentClasses.root}`]: {
+                flex: 0.5,
+                textAlign: "right",
+                minWidth: "60px",
+              },
+              padding: 0,
+              marginTop: "2rem",
+            }}
+          >
+            {route_middle_city_sequence.map((stop, index) => (
+              <TimelineItem key={index}>
+                <TimelineOppositeContent>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {stop.CityTime}
+                  </Typography>
+                </TimelineOppositeContent>
+
+                <TimelineSeparator>
+                  <TimelineDot color="grey" />
+                  {index !== route_middle_city_sequence.length - 1 && (
+                    <TimelineConnector />
+                  )}
+                </TimelineSeparator>
+
+                <TimelineContent>
+                  <Typography variant="body1" fontWeight={600}>
+                    {stop.CityName}
+                  </Typography>
+                </TimelineContent>
+              </TimelineItem>
+            ))}
+          </Timeline>
+
+          <div className="seat-details">
+            <h5>Seat details</h5>
+            {selected.length > 0 && (
+              <>
+                <span>Total Seat : {selected.length}</span>
+                <div className="seat-numbers">
+                  <div className="seat-badge">
+                    Seat No. {selected.map((item) => item.number).join(", ")}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -1038,441 +1261,535 @@ const SeatSelection = () => {
                   </div>
                 ))}
               </div>
-              <div
-                className={[
-                  "bottom-sheet",
-                  selected.length > 0 || selectedSeats.length > 0 ? "show" : "",
-                  isExpanded ? "expanded" : "",
-                ].join(" ")}
-              >
-                {!isExpanded ? (
-                  <>
-                    <div className="sheet-left">
-                      <span>
-                        {selected.length || selectedSeats.length} seat
-                      </span>
-                      <strong>₹{totalPrice}</strong>
-                    </div>
-                    <button
-                      className="sheet-button-Proceed"
-                      disabled={!selectedBoarding || !selectedDropping}
-                      onClick={() => {
-                        if (!selectedBoarding || !selectedDropping) {
-                          alert("Select boarding & dropping");
-                        } else if (login == null) {
-                          toast.error("Please login to proceed");
-                        } else {
-                          setIsExpanded(true);
-                        }
-                      }}
-                    >
-                      Proceed
-                    </button>
-                  </>
-                ) : (
-                  <div className="sheet-expanded">
-                    <button
-                      className="sheet-close-btn"
-                      onClick={() => setIsExpanded(false)}
-                    >
-                      ×
-                    </button>
 
-                    <div className="sheet-expanded-content">
-                      <div className="form-section">
-                        <h4>Contact details</h4>
-                        <p>We’ll send your ticket here</p>
-                        <TextField
-                          id="outlined-basic"
-                          label="Email"
-                          size="small"
-                          value={email ? email : userr?.email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          variant="outlined"
-                          className="my-email-field"
-                        />
-                        <TextField
-                          id="outlined-basic"
-                          label="Phone No."
-                          size="small"
-                          value={phone ? phone : userr?.mobile_no}
-                          onChange={(e) => setPhone(e.target.value)}
-                          variant="outlined"
-                          className="my-email-field"
-                        />
-                      </div>
-                    </div>
+              {(selected.length > 0 || selectedSeats.length > 0) && (
+                <div
+                  className={`backdrop-overlay ${isExpanded ? "visible" : ""}`}
+                  onClick={() => setIsExpanded(false)}
+                >
+                  <div
+                    className={[
+                      "bottom-sheet",
+                      selected.length > 0 || selectedSeats.length > 0
+                        ? "show"
+                        : "",
+                      isExpanded ? "expanded" : "",
+                    ].join(" ")}
+                    onClick={(e) => e.stopPropagation()} // prevent backdrop click from closing
+                  >
+                    {!isExpanded ? (
+                      <>
+                        <div className="sheet-left">
+                          <span>
+                            {selected.length || selectedSeats.length} seat
+                          </span>
+                          <strong>₹{totalPrice}</strong>
+                        </div>
+                        <button
+                          className="sheet-button-Proceed"
+                          disabled={!selectedBoarding || !selectedDropping}
+                          onClick={() => {
+                            if (!selectedBoarding || !selectedDropping) {
+                              alert("Select boarding & dropping");
+                            } else if (login == null) {
+                              toast.error("Please login to proceed");
+                            } else {
+                              setIsExpanded(true);
+                            }
+                          }}
+                        >
+                          Proceed
+                        </button>
+                      </>
+                    ) : (
+                      <div className="sheet-expanded">
+                        <div className="top-header-bar">
+                          <div
+                            className="sheet-close-btn"
+                            onClick={() => setIsExpanded(false)}
+                          >
+                            ×
+                          </div>
+                          <div className="route-text">
+                            <strong>{getBus?.FromCityName}</strong>{" "}
+                            <span className="arrow">→</span>{" "}
+                            <strong>{getBus?.ToCityName}</strong>
+                          </div>
+                        </div>
 
-                    <div className="sheet-expanded-content">
-                      <div className="form-section">
-                        <h4>Passenger details</h4>
-                        {bussitting === 1 ? (
-                          <>
-                            {selected.map((seat, index) => {
-                              const passenger = passengerDetails.find(
-                                (p) => p.seatNumber === seat.number
-                              ) || {
-                                seatNumber: seat.number,
-                                name: "",
-                                age: "",
-                                gender: seat.userGender || "",
-                              };
-                              return (
-                                <Accordion
-                                  style={{ marginTop: 20 }}
-                                  key={index}
-                                  expanded={expanded === index}
-                                  onChange={(_, isOpen) =>
-                                    setExpanded(isOpen ? index : false)
-                                  }
-                                  sx={{
-                                    borderRadius: 2,
-                                    mb: 1,
-                                    boxShadow: "0 0 0 rgba(0,0,0,0.1)",
-                                    "&:before": { display: "none" },
-                                    backgroundColor: "transparent",
+                        {/* <div className="d-flex width100taka align-items-center justify-content-end mt-2">
+                          {timeLeft !== null && (
+                            <span className="d-flex align-items-center gap-2 fw-bold text-danger">
+                              <FaStopwatch />
+                              {formatTime(timeLeft)}
+                            </span>
+                          )}
+                        </div> */}
+
+                        <div className="width100taka">
+                          <div className="width60taka">
+                            <div className="sheet-expanded-content">
+                              <div className="form-section">
+                                <h4>Contact Details</h4>
+                                <p>We’ll send your ticket here</p>
+                                <TextField
+                                  id="outlined-basic"
+                                  label="Email"
+                                  size="small"
+                                  value={email ? email : userr?.email}
+                                  onChange={(e) => setEmail(e.target.value)}
+                                  variant="outlined"
+                                  className="my-email-field"
+                                />
+                                <TextField
+                                  id="outlined-basic"
+                                  label="Phone No."
+                                  size="small"
+                                  inputMode="numeric"
+                                  value={phone ? phone : userr?.mobile_no}
+                                  onChange={(e) => {
+                                    const input = e.target.value;
+                                    if (/^\d{0,10}$/.test(input)) {
+                                      setPhone(input);
+                                    }
                                   }}
-                                >
-                                  <AccordionSummary
-                                    expandIcon={<FaAngleDown />}
-                                    sx={{
-                                      py: 1,
-                                      px: 2,
-                                      "& .MuiAccordionSummary-content": {
-                                        alignItems: "center",
-                                        gap: 2,
-                                      },
-                                    }}
-                                  >
-                                    <Avatar sx={{ bgcolor: "#e0f2f1" }}>
-                                      <IoPerson color="#00796b" />
-                                    </Avatar>
-                                    <Box>
-                                      <Typography
-                                        variant="subtitle1"
-                                        style={{ fontWeight: "bold" }}
-                                      >
-                                        Passenger {index + 1}
-                                      </Typography>
-                                      <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                      >
-                                        Seat No. {seat?.number}
-                                      </Typography>
-                                    </Box>
-                                  </AccordionSummary>
-
-                                  <AccordionDetails sx={{ px: 2, pb: 2 }}>
-                                    <Box
-                                      display="flex"
-                                      flexDirection="column"
-                                      gap={1}
-                                    >
-                                      <TextField
-                                        id={`name-${index}`}
-                                        label="Name"
-                                        variant="outlined"
-                                        size="small"
-                                        value={passenger.name}
-                                        onChange={(e) => {
-                                          const newPassengerDetails =
-                                            passengerDetails.map((p) =>
-                                              p.seatNumber === seat.number
-                                                ? { ...p, name: e.target.value }
-                                                : p
-                                            );
-                                          setPassengerDetails(
-                                            newPassengerDetails
-                                          );
-                                        }}
-                                        className="my-name-field"
-                                      />
-                                      <TextField
-                                        id={`age-${index}`}
-                                        label="Age"
-                                        variant="outlined"
-                                        size="small"
-                                        value={passenger.age}
-                                        onChange={(e) => {
-                                          const newPassengerDetails =
-                                            passengerDetails.map((p) =>
-                                              p.seatNumber === seat.number
-                                                ? { ...p, age: e.target.value }
-                                                : p
-                                            );
-                                          setPassengerDetails(
-                                            newPassengerDetails
-                                          );
-                                        }}
-                                        className="my-name-field"
-                                      />
-                                    </Box>
-                                    <div className="gender-container">
-                                      <label className="gender-label">
-                                        Gender
-                                      </label>
-                                      {seat?.userGender === "female" ? (
-                                        <p
-                                          style={{
-                                            color: "black",
-                                            textTransform: "capitalize",
+                                  variant="outlined"
+                                  className="my-email-field"
+                                  inputProps={{ maxLength: 10 }}
+                                />
+                              </div>
+                            </div>
+                            <div className="sheet-expanded-content">
+                              <div className="form-section">
+                                <h4>Passenger details</h4>
+                                {bussitting === 1 ? (
+                                  <>
+                                    {selected.map((seat, index) => {
+                                      const passenger = passengerDetails.find(
+                                        (p) => p.seatNumber === seat.number
+                                      ) || {
+                                        seatNumber: seat.number,
+                                        name: "",
+                                        age: "",
+                                        gender: seat.userGender || "",
+                                      };
+                                      return (
+                                        <Accordion
+                                          style={{ marginTop: 20 }}
+                                          key={index}
+                                          expanded={expanded === index}
+                                          onChange={(_, isOpen) =>
+                                            setExpanded(isOpen ? index : false)
+                                          }
+                                          sx={{
+                                            borderRadius: 2,
+                                            mb: 1,
+                                            boxShadow: "0 0 0 rgba(0,0,0,0.1)",
+                                            "&:before": { display: "none" },
+                                            backgroundColor: "transparent",
                                           }}
                                         >
-                                          female (reserved seat )
-                                        </p>
-                                      ) : (
-                                        <div className="gender-toggle">
-                                          <button
-                                            className={`gender-option ${
-                                              passenger.gender === "male"
-                                                ? "active"
-                                                : ""
-                                            }`}
-                                            onClick={() => {
-                                              const newPassengerDetails =
-                                                passengerDetails.map((p) =>
-                                                  p.seatNumber === seat.number
-                                                    ? { ...p, gender: "male" }
-                                                    : p
-                                                );
-                                              setPassengerDetails(
-                                                newPassengerDetails
-                                              );
+                                          <AccordionSummary
+                                            expandIcon={<FaAngleDown />}
+                                            sx={{
+                                              py: 1,
+                                              px: 2,
+                                              "& .MuiAccordionSummary-content":
+                                                {
+                                                  alignItems: "center",
+                                                  gap: 2,
+                                                },
                                             }}
                                           >
-                                            <div className="gender-icon">
-                                              <FaMale size={20} />{" "}
-                                              <div>Male</div>
-                                            </div>
-                                          </button>
-                                          <Divider
-                                            orientation="vertical"
-                                            flexItem
-                                          />
-                                          <button
-                                            className={`gender-option ${
-                                              passenger.gender === "female"
-                                                ? "activee"
-                                                : ""
-                                            }`}
-                                            onClick={() => {
-                                              const newPassengerDetails =
-                                                passengerDetails.map((p) =>
-                                                  p.seatNumber === seat.number
-                                                    ? { ...p, gender: "female" }
-                                                    : p
-                                                );
-                                              setPassengerDetails(
-                                                newPassengerDetails
-                                              );
-                                            }}
-                                          >
-                                            <div className="gender-icon">
-                                              <FaFemale size={20} />{" "}
-                                              <div>Female</div>
-                                            </div>
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </AccordionDetails>
-                                </Accordion>
-                              );
-                            })}
-                          </>
-                        ) : (
-                          <>
-                            {selectedSeats.map((seat, index) => {
-                              const passenger = passengerDetails.find(
-                                (p) => p.seatNumber === seat.seatNo
-                              ) || {
-                                seatNumber: seat.seatNo,
-                                name: "",
-                                age: "",
-                                gender: seat.userGender || "",
-                              };
-                              return (
-                                <Accordion
-                                  style={{ marginTop: 20 }}
-                                  key={index}
-                                  expanded={expanded === index}
-                                  onChange={(_, isOpen) =>
-                                    setExpanded(isOpen ? index : false)
-                                  }
-                                  sx={{
-                                    borderRadius: 2,
-                                    mb: 1,
-                                    boxShadow: "0 0 0 rgba(0,0,0,0.1)",
-                                    "&:before": { display: "none" },
-                                    backgroundColor: "transparent",
-                                  }}
-                                >
-                                  <AccordionSummary
-                                    expandIcon={<FaAngleDown />}
-                                    sx={{
-                                      py: 1,
-                                      px: 2,
-                                      "& .MuiAccordionSummary-content": {
-                                        alignItems: "center",
-                                        gap: 2,
-                                      },
-                                    }}
-                                  >
-                                    <Avatar sx={{ bgcolor: "#e0f2f1" }}>
-                                      <IoPerson color="#00796b" />
-                                    </Avatar>
-                                    <Box>
-                                      <Typography
-                                        variant="subtitle1"
-                                        style={{ fontWeight: "bold" }}
-                                      >
-                                        Passenger {index + 1}
-                                      </Typography>
-                                      <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                      >
-                                        Seat No. {seat?.seatNo}
-                                      </Typography>
-                                    </Box>
-                                  </AccordionSummary>
+                                            <Avatar sx={{ bgcolor: "#e0f2f1" }}>
+                                              <IoPerson color="#00796b" />
+                                            </Avatar>
+                                            <Box>
+                                              <Typography
+                                                variant="subtitle1"
+                                                style={{ fontWeight: "bold" }}
+                                              >
+                                                Passenger {index + 1}
+                                              </Typography>
+                                              <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                              >
+                                                Seat No. {seat?.number}
+                                              </Typography>
+                                            </Box>
+                                          </AccordionSummary>
 
-                                  <AccordionDetails sx={{ px: 2, pb: 2 }}>
-                                    <Box
-                                      display="flex"
-                                      flexDirection="column"
-                                      gap={1}
-                                    >
-                                      <TextField
-                                        id={`name-${index}`}
-                                        label="Name"
-                                        variant="outlined"
-                                        size="small"
-                                        value={passenger.name}
-                                        onChange={(e) => {
-                                          const newPassengerDetails =
-                                            passengerDetails.map((p) =>
-                                              p.seatNumber === seat.seatNo
-                                                ? { ...p, name: e.target.value }
-                                                : p
-                                            );
-                                          setPassengerDetails(
-                                            newPassengerDetails
-                                          );
-                                        }}
-                                        className="my-name-field"
-                                      />
-                                      <TextField
-                                        id={`age-${index}`}
-                                        label="Age"
-                                        variant="outlined"
-                                        size="small"
-                                        value={passenger.age}
-                                        onChange={(e) => {
-                                          const newPassengerDetails =
-                                            passengerDetails.map((p) =>
-                                              p.seatNumber === seat.seatNo
-                                                ? { ...p, age: e.target.value }
-                                                : p
-                                            );
-                                          setPassengerDetails(
-                                            newPassengerDetails
-                                          );
-                                        }}
-                                        className="my-name-field"
-                                      />
-                                    </Box>
-                                    <div className="gender-container">
-                                      <label className="gender-label">
-                                        Gender
-                                      </label>
-                                      {seat?.userGender === "female" ? (
-                                        <p
-                                          style={{
-                                            color: "black",
-                                            textTransform: "capitalize",
+                                          <AccordionDetails
+                                            sx={{ px: 2, pb: 2 }}
+                                          >
+                                            <Box
+                                              display="flex"
+                                              flexDirection="column"
+                                              gap={1}
+                                            >
+                                              <TextField
+                                                id={`name-${index}`}
+                                                label="Name"
+                                                variant="outlined"
+                                                size="small"
+                                                value={passenger.name}
+                                                onChange={(e) => {
+                                                  const newPassengerDetails =
+                                                    passengerDetails.map((p) =>
+                                                      p.seatNumber ===
+                                                      seat.number
+                                                        ? {
+                                                            ...p,
+                                                            name: e.target
+                                                              .value,
+                                                          }
+                                                        : p
+                                                    );
+                                                  setPassengerDetails(
+                                                    newPassengerDetails
+                                                  );
+                                                }}
+                                                className="my-name-field"
+                                              />
+                                              <TextField
+                                                id={`age-${index}`}
+                                                label="Age"
+                                                variant="outlined"
+                                                size="small"
+                                                value={passenger.age}
+                                                onChange={(e) => {
+                                                  const newPassengerDetails =
+                                                    passengerDetails.map((p) =>
+                                                      p.seatNumber ===
+                                                      seat.number
+                                                        ? {
+                                                            ...p,
+                                                            age: e.target.value,
+                                                          }
+                                                        : p
+                                                    );
+                                                  setPassengerDetails(
+                                                    newPassengerDetails
+                                                  );
+                                                }}
+                                                className="my-name-field"
+                                              />
+                                            </Box>
+                                            <div className="gender-container">
+                                              <label className="gender-label">
+                                                Gender
+                                              </label>
+                                              {seat?.userGender === "female" ? (
+                                                <p
+                                                  style={{
+                                                    color: "black",
+                                                    textTransform: "capitalize",
+                                                  }}
+                                                >
+                                                  female (reserved seat )
+                                                </p>
+                                              ) : (
+                                                <div className="gender-toggle">
+                                                  <button
+                                                    className={`gender-option ${
+                                                      passenger.gender ===
+                                                      "male"
+                                                        ? "active"
+                                                        : ""
+                                                    }`}
+                                                    onClick={() => {
+                                                      const newPassengerDetails =
+                                                        passengerDetails.map(
+                                                          (p) =>
+                                                            p.seatNumber ===
+                                                            seat.number
+                                                              ? {
+                                                                  ...p,
+                                                                  gender:
+                                                                    "male",
+                                                                }
+                                                              : p
+                                                        );
+                                                      setPassengerDetails(
+                                                        newPassengerDetails
+                                                      );
+                                                    }}
+                                                  >
+                                                    <div className="gender-icon">
+                                                      <FaMale size={20} />{" "}
+                                                      <div>Male</div>
+                                                    </div>
+                                                  </button>
+                                                  <Divider
+                                                    orientation="vertical"
+                                                    flexItem
+                                                  />
+                                                  <button
+                                                    className={`gender-option ${
+                                                      passenger.gender ===
+                                                      "female"
+                                                        ? "activee"
+                                                        : ""
+                                                    }`}
+                                                    onClick={() => {
+                                                      const newPassengerDetails =
+                                                        passengerDetails.map(
+                                                          (p) =>
+                                                            p.seatNumber ===
+                                                            seat.number
+                                                              ? {
+                                                                  ...p,
+                                                                  gender:
+                                                                    "female",
+                                                                }
+                                                              : p
+                                                        );
+                                                      setPassengerDetails(
+                                                        newPassengerDetails
+                                                      );
+                                                    }}
+                                                  >
+                                                    <div className="gender-icon">
+                                                      <FaFemale size={20} />{" "}
+                                                      <div>Female</div>
+                                                    </div>
+                                                  </button>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </AccordionDetails>
+                                        </Accordion>
+                                      );
+                                    })}
+                                  </>
+                                ) : (
+                                  <>
+                                    {selectedSeats.map((seat, index) => {
+                                      const passenger = passengerDetails.find(
+                                        (p) => p.seatNumber === seat.seatNo
+                                      ) || {
+                                        seatNumber: seat.seatNo,
+                                        name: "",
+                                        age: "",
+                                        gender: seat.userGender || "",
+                                      };
+                                      return (
+                                        <Accordion
+                                          style={{ marginTop: 20 }}
+                                          key={index}
+                                          expanded={expanded === index}
+                                          onChange={(_, isOpen) =>
+                                            setExpanded(isOpen ? index : false)
+                                          }
+                                          sx={{
+                                            borderRadius: 2,
+                                            mb: 1,
+                                            boxShadow: "0 0 0 rgba(0,0,0,0.1)",
+                                            "&:before": { display: "none" },
+                                            backgroundColor: "transparent",
                                           }}
                                         >
-                                          female (reserved seat)
-                                        </p>
-                                      ) : (
-                                        <div className="gender-toggle">
-                                          <button
-                                            className={`gender-option ${
-                                              passenger.gender === "male"
-                                                ? "active"
-                                                : ""
-                                            }`}
-                                            onClick={() => {
-                                              const newPassengerDetails =
-                                                passengerDetails.map((p) =>
-                                                  p.seatNumber === seat.seatNo
-                                                    ? { ...p, gender: "male" }
-                                                    : p
-                                                );
-                                              setPassengerDetails(
-                                                newPassengerDetails
-                                              );
+                                          <AccordionSummary
+                                            expandIcon={<FaAngleDown />}
+                                            sx={{
+                                              py: 1,
+                                              px: 2,
+                                              "& .MuiAccordionSummary-content":
+                                                {
+                                                  alignItems: "center",
+                                                  gap: 2,
+                                                },
                                             }}
                                           >
-                                            <div className="gender-icon">
-                                              <FaMale size={20} />{" "}
-                                              <div>Male</div>
-                                            </div>
-                                          </button>
-                                          <Divider
-                                            orientation="vertical"
-                                            flexItem
-                                          />
-                                          <button
-                                            className={`gender-option ${
-                                              passenger.gender === "female"
-                                                ? "activee"
-                                                : ""
-                                            }`}
-                                            onClick={() => {
-                                              const newPassengerDetails =
-                                                passengerDetails.map((p) =>
-                                                  p.seatNumber === seat.seatNo
-                                                    ? { ...p, gender: "female" }
-                                                    : p
-                                                );
-                                              setPassengerDetails(
-                                                newPassengerDetails
-                                              );
-                                            }}
+                                            <Avatar sx={{ bgcolor: "#e0f2f1" }}>
+                                              <IoPerson color="#00796b" />
+                                            </Avatar>
+                                            <Box>
+                                              <Typography
+                                                variant="subtitle1"
+                                                style={{ fontWeight: "bold" }}
+                                              >
+                                                Passenger {index + 1}
+                                              </Typography>
+                                              <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                              >
+                                                Seat No. {seat?.seatNo}
+                                              </Typography>
+                                            </Box>
+                                          </AccordionSummary>
+
+                                          <AccordionDetails
+                                            sx={{ px: 2, pb: 2 }}
                                           >
-                                            <div className="gender-icon">
-                                              <FaFemale size={20} />{" "}
-                                              <div>Female</div>
+                                            <Box
+                                              display="flex"
+                                              flexDirection="column"
+                                              gap={1}
+                                            >
+                                              <TextField
+                                                id={`name-${index}`}
+                                                label="Name"
+                                                variant="outlined"
+                                                size="small"
+                                                value={passenger.name}
+                                                onChange={(e) => {
+                                                  const newPassengerDetails =
+                                                    passengerDetails.map((p) =>
+                                                      p.seatNumber ===
+                                                      seat.seatNo
+                                                        ? {
+                                                            ...p,
+                                                            name: e.target
+                                                              .value,
+                                                          }
+                                                        : p
+                                                    );
+                                                  setPassengerDetails(
+                                                    newPassengerDetails
+                                                  );
+                                                }}
+                                                className="my-name-field"
+                                              />
+                                              <TextField
+                                                id={`age-${index}`}
+                                                label="Age"
+                                                variant="outlined"
+                                                size="small"
+                                                value={passenger.age}
+                                                onChange={(e) => {
+                                                  const newPassengerDetails =
+                                                    passengerDetails.map((p) =>
+                                                      p.seatNumber ===
+                                                      seat.seatNo
+                                                        ? {
+                                                            ...p,
+                                                            age: e.target.value,
+                                                          }
+                                                        : p
+                                                    );
+                                                  setPassengerDetails(
+                                                    newPassengerDetails
+                                                  );
+                                                }}
+                                                className="my-name-field"
+                                              />
+                                            </Box>
+                                            <div className="gender-container">
+                                              <label className="gender-label">
+                                                Gender
+                                              </label>
+                                              {seat?.userGender === "female" ? (
+                                                <p
+                                                  style={{
+                                                    color: "black",
+                                                    textTransform: "capitalize",
+                                                  }}
+                                                >
+                                                  female (reserved seat)
+                                                </p>
+                                              ) : (
+                                                <div className="gender-toggle">
+                                                  <button
+                                                    className={`gender-option ${
+                                                      passenger.gender ===
+                                                      "male"
+                                                        ? "active"
+                                                        : ""
+                                                    }`}
+                                                    onClick={() => {
+                                                      const newPassengerDetails =
+                                                        passengerDetails.map(
+                                                          (p) =>
+                                                            p.seatNumber ===
+                                                            seat.seatNo
+                                                              ? {
+                                                                  ...p,
+                                                                  gender:
+                                                                    "male",
+                                                                }
+                                                              : p
+                                                        );
+                                                      setPassengerDetails(
+                                                        newPassengerDetails
+                                                      );
+                                                    }}
+                                                  >
+                                                    <div className="gender-icon">
+                                                      <FaMale size={20} />{" "}
+                                                      <div>Male</div>
+                                                    </div>
+                                                  </button>
+                                                  <Divider
+                                                    orientation="vertical"
+                                                    flexItem
+                                                  />
+                                                  <button
+                                                    className={`gender-option ${
+                                                      passenger.gender ===
+                                                      "female"
+                                                        ? "activee"
+                                                        : ""
+                                                    }`}
+                                                    onClick={() => {
+                                                      const newPassengerDetails =
+                                                        passengerDetails.map(
+                                                          (p) =>
+                                                            p.seatNumber ===
+                                                            seat.seatNo
+                                                              ? {
+                                                                  ...p,
+                                                                  gender:
+                                                                    "female",
+                                                                }
+                                                              : p
+                                                        );
+                                                      setPassengerDetails(
+                                                        newPassengerDetails
+                                                      );
+                                                    }}
+                                                  >
+                                                    <div className="gender-icon">
+                                                      <FaFemale size={20} />{" "}
+                                                      <div>Female</div>
+                                                    </div>
+                                                  </button>
+                                                </div>
+                                              )}
                                             </div>
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </AccordionDetails>
-                                </Accordion>
-                              );
-                            })}
-                          </>
-                        )}
+                                          </AccordionDetails>
+                                        </Accordion>
+                                      );
+                                    })}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div className="d-flex justify-content-center align-items-center">
+                              <button
+                                className="sheet-button"
+                                onClick={handleConfirm}
+                                // onClick={startCountdownTimer}
+                                disabled={book_seat_data_loading}
+                              >
+                                {book_seat_data_loading
+                                  ? "Processing..."
+                                  : "Confirm Booking"}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="width40taka">
+                            <TravelCard />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="d-flex justify-content-center align-items-center">
-                      <button
-                        className="sheet-button"
-                        onClick={handleConfirm}
-                        disabled={book_seat_data_loading}
-                      >
-                        {book_seat_data_loading
-                          ? "Processing..."
-                          : "Confirm Booking"}
-                      </button>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </>
         )}

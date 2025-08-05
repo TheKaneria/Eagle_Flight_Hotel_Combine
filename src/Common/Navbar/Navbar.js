@@ -191,6 +191,7 @@ const Navbar = () => {
 
   useEffect(() => {
     currentAccountBalApi();
+    companyListApi();
   }, []);
 
   const handleSubmitPNR = () => {
@@ -199,9 +200,7 @@ const Navbar = () => {
     if (!pnrNumber || pnrNumber.trim() === "") {
       Notification("error", "Error!", "Please enter a valid PNR number.");
     }
-
     getBookSeatDetails();
-    getTicketStatus();
   };
 
   const handlePrintPNR = () => {
@@ -234,23 +233,6 @@ const Navbar = () => {
 
     if (data) {
       console.log("get book seat data", data);
-      if (data.status == 1) {
-        setPnrNumber("");
-      }
-    }
-  };
-
-  const getTicketStatus = async () => {
-    const formdata = new FormData();
-    await formdata.append("type", "POST");
-    await formdata.append("url", TicketStatus);
-    await formdata.append("verifyCall", verifyCall);
-    await formdata.append("pnrNo", pnrNumber);
-
-    const data = await TicketStatusApi(formdata);
-
-    if (data) {
-      console.log("get ticket status data", data);
       if (data.status == 1) {
         setPnrNumber("");
       }
@@ -306,10 +288,6 @@ const Navbar = () => {
     await formdata.append("verifyCall", verifyCall);
 
     const data = await companyListBusApi(formdata);
-    if (data) {
-      console.log("data", data);
-      // window.location.reload(false);
-    }
   };
 
   //  Current Account Balance API
@@ -322,7 +300,6 @@ const Navbar = () => {
 
     const data = await currentAccountBalanceApi(formdata);
     if (data) {
-      // console.log("data ok", data);
       // window.location.reload(false);
     }
   };
@@ -351,6 +328,8 @@ const Navbar = () => {
   };
 
   const LoGin = async (e, email) => {
+    console.log("EEEE", e);
+
     if (e == 0 || e === "0") {
       if (getemail === "") {
         alert("Enter the Email.....!");
@@ -359,11 +338,16 @@ const Navbar = () => {
         alert("Enter the valid Email....!");
         return;
       } else {
+        console.log("check");
+
         const formdata = new FormData();
         await formdata.append("email", getemail);
         await formdata.append("login_type", e);
 
         const data = await Loginn(formdata);
+
+        console.log("ZEEL KANERIAAAAA", data);
+
         if (data) {
           console.log("data", data);
           if (data.success == 1) {
@@ -386,6 +370,7 @@ const Navbar = () => {
         localStorage.setItem("is_role", JSON.stringify(data.user.role));
         // Login();
         companyListApi();
+        window.location.reload();
       }
     }
   };
@@ -714,12 +699,13 @@ const Navbar = () => {
 
   const handleSuccess = (resp) => {
     // setLoginType(1);
-    console.log("login", resp);
+    // console.log("login", resp);
     const decode = jwtDecode(resp?.credential);
     setEmail(decode?.email);
     console.log(decode);
-
     LoGin(1, decode?.email);
+
+    // window.location.reload(false);
   };
 
   const handleError = (err) => {

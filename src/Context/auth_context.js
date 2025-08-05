@@ -59,6 +59,8 @@ const initialState = {
   cancellation_policy_loading: false,
   currentaccountbalance: "",
   currentaccountbalanceloading: false,
+  getcompanylist_loading: false,
+  getcompanylist_data: [],
 };
 
 const AuthContext = React.createContext();
@@ -217,14 +219,12 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: LOGIN_BEGIN });
     // proxy + "https://omairiq.azurewebsites.net/login",
     try {
-      const response = await fetch(logincurl,
-        {
-          method: "POST",
-          headers: ACCEPT_HEADER1,
-          body: JSON.stringify(params),
-          redirect: "follow"
-        }
-      );
+      const response = await fetch(logincurl, {
+        method: "POST",
+        headers: ACCEPT_HEADER1,
+        body: JSON.stringify(params),
+        redirect: "follow",
+      });
 
       const responseData = await response.json(); // Parse response JSON
 
@@ -305,11 +305,17 @@ export const AuthProvider = ({ children }) => {
         },
       });
       const companylist = resp.data;
+
+      // console.log("sdfbgngds", companylist);
+
       if (companylist.status == 1) {
         dispatch({ type: GET_COMPANY_LIST_SUCCESS, payload: companylist });
         // Notification("success", "Success!", companylist.message);
 
-        localStorage.setItem("companyid", JSON.stringify(companylist.data.ITSCompanyList[0]?.CompanyID));
+        localStorage.setItem(
+          "companyid",
+          JSON.stringify(companylist.data.ITSCompanyList[0]?.CompanyID)
+        );
       } else {
         Notification("warning", "Warning!", companylist.message);
         dispatch({ type: GET_COMPANY_LIST_ERROR });
@@ -322,6 +328,7 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   };
+
   const currentAccountBalanceApi = async (params) => {
     dispatch({ type: GET_CURRENT_ACCOUNT_BALANCE_BEGIN });
 
@@ -333,7 +340,10 @@ export const AuthProvider = ({ children }) => {
       });
       const currentbalres = resp.data;
       if (currentbalres.status == 1) {
-        dispatch({ type: GET_CURRENT_ACCOUNT_BALANCE_SUCCESS, payload: currentbalres.data.ITSCurrentAccountBAL[0].Balance});
+        dispatch({
+          type: GET_CURRENT_ACCOUNT_BALANCE_SUCCESS,
+          payload: currentbalres.data.ITSCurrentAccountBAL[0].Balance,
+        });
         // Notification("success", "Success!", currentbalres.message);
       } else {
         Notification("warning", "Warning!", currentbalres.message);
@@ -359,9 +369,10 @@ export const AuthProvider = ({ children }) => {
       });
       const companylist = resp.data;
       if (companylist.status == 1) {
-
-        dispatch({ type: GET_CANCELLATION_POLICY_SUCCESS, payload: companylist.data.ITSCancellation });
-
+        dispatch({
+          type: GET_CANCELLATION_POLICY_SUCCESS,
+          payload: companylist.data.ITSCancellation,
+        });
       } else {
         Notification("warning", "Warning!", companylist.message);
         dispatch({ type: GET_CANCELLATION_POLICY_ERROR });
@@ -390,7 +401,10 @@ export const AuthProvider = ({ children }) => {
       if (loginData.success == 1) {
         dispatch({ type: LOGIN_SUCCESS_AIR_LIVE, payload: loginData });
         localStorage.setItem("is_login_airiq", JSON.stringify(true));
-        localStorage.setItem("logindata_airiq", JSON.stringify(loginData.Token));
+        localStorage.setItem(
+          "logindata_airiq",
+          JSON.stringify(loginData.Token)
+        );
         // Notification("success", "Success!", loginData.message);
       } else {
         // alert(loginData.message);

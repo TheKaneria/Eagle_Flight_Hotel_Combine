@@ -14,7 +14,6 @@ import { BsBusFront, BsBatteryCharging } from "react-icons/bs";
 import { IoAirplaneSharp } from "react-icons/io5";
 import { BiBlanket, BiSolidPlaneAlt } from "react-icons/bi";
 import { LuLampDesk } from "react-icons/lu";
-import { GiWaterBottle } from "react-icons/gi";
 import {
   FaChevronDown,
   FaExchangeAlt,
@@ -58,7 +57,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import { Navigation } from "swiper/modules";
 import { useAuthContext } from "../../Context/auth_context";
-
+import { toast } from "react-toastify";
 import {
   motion,
   useScroll,
@@ -352,7 +351,25 @@ const HomeHero = () => {
 
   useEffect(() => {
     var companyid = localStorage.getItem("companyid");
-    setCompanyId(companyid);
+    if (companyid) {
+      setCompanyId(companyid);
+    }
+
+    // const getAmenitiesBus = async () => {
+    //   const formdata = new FormData();
+    //   await formdata.append("type", "POST");
+    //   await formdata.append("url", getamenities);
+    //   await formdata.append("verifyCall", verifyCall);
+    //   await formdata.append("companyID", companyid);
+
+    //   const data = await GetAmenitiesApi(formdata);
+
+    //   if (data) {
+    //     // console.log("Amenities data", data);
+    //   }
+    // };
+
+    // return getAmenitiesBus();
   }, []);
 
   const navigate = useNavigate();
@@ -1933,7 +1950,8 @@ const HomeHero = () => {
     from_city,
     to_city,
     TabSelection,
-    selectedTab,
+    selectedTabMainHome,
+    amenities_data,
   } = useBusContext();
 
   // console.log("route_data", route_data);
@@ -2063,9 +2081,26 @@ const HomeHero = () => {
   }, []);
 
   useEffect(() => {
-    getAmenitiesBus();
+    // getAmenitiesBus();
     getCityPairBus();
   }, []);
+
+  const parseBoardingPoints = (boardingPointsStr) => {
+    if (!boardingPointsStr) return [];
+    return boardingPointsStr.split("#").flatMap((group) => {
+      const [id, name, time, address] = group.split("|");
+      return { id, name, time, address };
+    });
+  };
+
+  // Parse dropping points dynamically
+  const parseDroppingPoints = (droppingPointsStr) => {
+    if (!droppingPointsStr) return [];
+    return droppingPointsStr.split("#").flatMap((group) => {
+      const [id, name, time] = group.split("|");
+      return { id, name, time };
+    });
+  };
 
   const getSourceBus = async () => {
     const formdata = new FormData();
@@ -2093,17 +2128,28 @@ const HomeHero = () => {
   };
 
   const getRouteBus = async () => {
-    const formdata = new FormData();
-    await formdata.append("type", "POST");
-    await formdata.append("url", getRoutes);
-    await formdata.append("verifyCall", verifyCall);
-    await formdata.append("fromID", fromBusId);
-    await formdata.append("toID", toBusId);
-    await formdata.append("JourneyDate", moment(date1).format("DD-MM-YYYY"));
+    if (!fromBusId) {
+      toast.warning("Please Select From City");
+      return;
+    } else if (!toBusId) {
+      toast.warning("Please Select To City");
+      return;
+    } else if (!date1) {
+      toast.warning("Please Select Journey Date");
+      return;
+    } else {
+      const formdata = new FormData();
+      await formdata.append("type", "POST");
+      await formdata.append("url", getRoutes);
+      await formdata.append("verifyCall", verifyCall);
+      await formdata.append("fromID", fromBusId);
+      await formdata.append("toID", toBusId);
+      await formdata.append("JourneyDate", moment(date1).format("DD-MM-YYYY"));
 
-    const data = await GetRoutes(formdata);
-    if (data) {
-      console.log("bus route data", data);
+      const data = await GetRoutes(formdata);
+      if (data) {
+        console.log("bus route data", data);
+      }
     }
   };
 
@@ -2117,19 +2163,6 @@ const HomeHero = () => {
     const data = await GetSeatArrangementDetail(formdata);
     if (data) {
       console.log("bus seat arrangement data", data);
-    }
-  };
-  const getAmenitiesBus = async () => {
-    const formdata = new FormData();
-    await formdata.append("type", "POST");
-    await formdata.append("url", getamenities);
-    await formdata.append("verifyCall", verifyCall);
-    await formdata.append("companyID", getCompanyId);
-
-    const data = await GetAmenitiesApi(formdata);
-
-    if (data) {
-      console.log("Amenities data", data);
     }
   };
 
@@ -2595,7 +2628,7 @@ const HomeHero = () => {
                 className="search-buttonRes"
                 onClick={() => {
                   {
-                    selectedTab === "buses"
+                    selectedTabMainHome === "buses"
                       ? getRouteBus()
                       : searchFlightData();
                   }
@@ -4709,6 +4742,7 @@ const HomeHero = () => {
                   <>
                     {visibleData?.map((bus, index) => (
                       <div key={index}>
+                        {console.log("BUSES", bus)}
                         {/* Desktop Bus Card */}
                         <div className="bus-card">
                           <div className="d-flex justify-content-between">
@@ -4718,7 +4752,7 @@ const HomeHero = () => {
                                 style={{ backgroundColor: bus.tagColor }}
                               >
                                 {bus.tag}
-                                {index}
+                                {index + 1}
                               </div>
                               <div className="bus-title">Eagle Express</div>
                               <div className="d-flex flex-row flex-lg-column">
@@ -4882,17 +4916,25 @@ const HomeHero = () => {
                                   <div className="pickupdiv">
                                     <h5 className="fw-bolder">Pickup Points</h5>
                                     <ul>
-                                      <li>03:00 - Greenland Chokdi</li>
-                                      <li>03:15 - Gondal Chowkdi</li>
+                                      {parseBoardingPoints(
+                                        bus.BoardingPoints
+                                      ).map((point, idx) => (
+                                        <li key={idx}>
+                                          {point.time} - {point.name}
+                                        </li>
+                                      ))}
                                     </ul>
                                   </div>
                                   <div className="dropdiv">
                                     <h5 className="fw-bolder">Drop Points</h5>
                                     <ul>
-                                      <li>06:15 - Air Port, Porbandar</li>
-                                      <li>06:20 - Narshan Tekri</li>
-                                      <li>06:25 - Kamla Baug</li>
-                                      <li>06:30 - M.G Road</li>
+                                      {parseDroppingPoints(
+                                        bus.DroppingPoints
+                                      ).map((point, idx) => (
+                                        <li key={idx}>
+                                          {point.time} - {point.name}
+                                        </li>
+                                      ))}
                                     </ul>
                                   </div>
                                 </div>
@@ -4908,7 +4950,7 @@ const HomeHero = () => {
                               className="bus-tag"
                               style={{ backgroundColor: bus.tagColor }}
                             >
-                              {bus.tag}
+                              {index + 1}
                             </div>
                             <div
                               style={{
@@ -4929,13 +4971,6 @@ const HomeHero = () => {
                                   {bus.ArrivalTime}
                                 </span>
                               </div>
-                              <div>
-                                <div className="bus-rating">
-                                  <span className="rating-star">
-                                    ★ {bus.rating}
-                                  </span>
-                                </div>
-                              </div>
                             </div>
                             <div
                               style={{
@@ -4949,7 +4984,7 @@ const HomeHero = () => {
                                   bus.CityTime,
                                   bus.ArrivalTime
                                 )}{" "}
-                                • {bus.EmptySeats}
+                                • {bus.EmptySeats} Seats
                               </div>
                               <div>
                                 <div className="bus-price">

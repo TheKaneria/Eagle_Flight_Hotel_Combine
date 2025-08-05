@@ -30,6 +30,9 @@ import {
   GET_FETCH_TICKET_PRINT_DATA_BEGIN,
   GET_FETCH_TICKET_PRINT_DATA_ERROR,
   GET_FETCH_TICKET_PRINT_DATA_SUCCESS,
+  GET_ROUTE_MIDDLE_CITY_SEQUENCE_BEGIN,
+  GET_ROUTE_MIDDLE_CITY_SEQUENCE_ERROR,
+  GET_ROUTE_MIDDLE_CITY_SEQUENCE_SUCCESS,
   GET_ROUTES_BEGIN,
   GET_ROUTES_ERROR,
   GET_ROUTES_SUCCESS,
@@ -56,6 +59,9 @@ import {
   ROUTEWISE_CANCELLATION_POLICY_SUCCESS,
   SELECTED_TAB,
   TO_CITY,
+  GET_CURRENT_ACCOUNT_BALANCE_BEGIN,
+  GET_CURRENT_ACCOUNT_BALANCE_SUCCESS,
+  GET_CURRENT_ACCOUNT_BALANCE_ERROR,
 } from "../Actions";
 
 const bus_reducer = (state, action) => {
@@ -106,6 +112,20 @@ const bus_reducer = (state, action) => {
   }
   if (action.type === GET_AMENITIES_ERROR) {
     return { ...state, amenities_loading: false };
+  }
+  if (action.type === GET_CURRENT_ACCOUNT_BALANCE_BEGIN) {
+    return { ...state, currentaccountbalanceloading: true };
+  }
+  if (action.type === GET_CURRENT_ACCOUNT_BALANCE_SUCCESS) {
+    return {
+      ...state,
+      currentaccountbalanceloading: false,
+      currentaccountbalance: action.payload,
+    };
+  }
+
+  if (action.type === GET_CURRENT_ACCOUNT_BALANCE_ERROR) {
+    return { ...state, currentaccountbalanceloading: false };
   }
 
   if (action.type === GET_CITY_PAIR_BEGIN) {
@@ -307,6 +327,19 @@ const bus_reducer = (state, action) => {
       ...state,
       confirm_partial_cancellation_loading: false,
     };
+  }
+  if (action.type === GET_ROUTE_MIDDLE_CITY_SEQUENCE_BEGIN) {
+    return { ...state, route_middle_city_sequence_loading: true };
+  }
+  if (action.type === GET_ROUTE_MIDDLE_CITY_SEQUENCE_SUCCESS) {
+    return {
+      ...state,
+      route_middle_city_sequence_loading: false,
+      route_middle_city_sequence: action.payload,
+    };
+  }
+  if (action.type === GET_ROUTE_MIDDLE_CITY_SEQUENCE_ERROR) {
+    return { ...state, route_middle_city_sequence_loading: false };
   } else {
     return { ...state };
   }

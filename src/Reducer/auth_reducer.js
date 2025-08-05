@@ -20,10 +20,12 @@ import {
   GET_CURRENT_ACCOUNT_BALANCE_BEGIN,
   GET_CURRENT_ACCOUNT_BALANCE_SUCCESS,
   GET_CURRENT_ACCOUNT_BALANCE_ERROR,
+  GET_COMPANY_LIST_BEGIN,
+  GET_COMPANY_LIST_SUCCESS,
+  GET_COMPANY_LIST_ERROR,
 } from "../Actions";
 
 const auth_reducer = (state, action) => {
-
   // register customer
 
   if (action.type === REGISTER_CUSTOMER_BEGIN) {
@@ -43,7 +45,6 @@ const auth_reducer = (state, action) => {
     return { ...state, register_customer_loading: false };
   }
 
-
   // User login api
   if (action.type === LOGIN_BEGIN) {
     return { ...state, login_loading: true };
@@ -62,6 +63,21 @@ const auth_reducer = (state, action) => {
     return { ...state, login_loading: false, login_error: true };
   }
 
+  if (action.type === GET_COMPANY_LIST_BEGIN) {
+    return { ...state, getcompanylist_loading: true };
+  }
+
+  if (action.type === GET_COMPANY_LIST_SUCCESS) {
+    return {
+      ...state,
+      getcompanylist_loading: false,
+      getcompanylist_data: action.payload,
+    };
+  }
+
+  if (action.type === GET_COMPANY_LIST_ERROR) {
+    return { ...state, getcompanylist_loading: false };
+  }
 
   // User login api
   if (action.type === LOGIN_BEGIN_AIR_LIVE) {
@@ -90,16 +106,15 @@ const auth_reducer = (state, action) => {
     return {
       ...state,
       forgot_password_loading: false,
-
     };
   }
 
   if (action.type === FORGOT_PASSWORD_FAIL) {
-    return { ...state, forgot_password_loading: false, };
+    return { ...state, forgot_password_loading: false };
   }
 
   if (action.type === FORGOT_PASSWORD_OTP_BEGIN) {
-    return { ...state, forgot_password_otp_loading: false, };
+    return { ...state, forgot_password_otp_loading: false };
   }
 
   // forgot password api
@@ -129,7 +144,7 @@ const auth_reducer = (state, action) => {
   }
 
   if (action.type === GET_CANCELLATION_POLICY_ERROR) {
-    return { ...state, cancellation_policy_loading: false, };
+    return { ...state, cancellation_policy_loading: false };
   }
 
   // Cancellation login api
@@ -147,9 +162,8 @@ const auth_reducer = (state, action) => {
   }
 
   if (action.type === GET_CURRENT_ACCOUNT_BALANCE_ERROR) {
-    return { ...state, currentaccountbalanceloading: false, };
+    return { ...state, currentaccountbalanceloading: false };
   }
-
 };
 
 export default auth_reducer;

@@ -32,6 +32,9 @@ import {
   GET_FETCH_TICKET_PRINT_DATA_BEGIN,
   GET_FETCH_TICKET_PRINT_DATA_ERROR,
   GET_FETCH_TICKET_PRINT_DATA_SUCCESS,
+  GET_ROUTE_MIDDLE_CITY_SEQUENCE_BEGIN,
+  GET_ROUTE_MIDDLE_CITY_SEQUENCE_ERROR,
+  GET_ROUTE_MIDDLE_CITY_SEQUENCE_SUCCESS,
   GET_ROUTES_BEGIN,
   GET_ROUTES_ERROR,
   GET_ROUTES_SUCCESS,
@@ -69,6 +72,7 @@ import {
   getRoutes,
   getSources,
 } from "../Utils/Constant";
+import { toast } from "react-toastify";
 
 const initialState = {
   source_loading: false,
@@ -89,7 +93,7 @@ const initialState = {
   book_seat_details_data_loading: false,
   fetch_ticket_print_data: {},
   fetch_ticket_print_loading: false,
-  ticket_status: {},
+  ticket_status: [],
   ticket_status_loading: false,
   booking_data: [],
   booking_data_loading: false,
@@ -99,15 +103,16 @@ const initialState = {
   journey_datewise_cancellation_policy_loading: false,
   routewie_cancellation_policy: {},
   routewise_cancellation_policy_loading: false,
-  cancellation_details: {},
+  cancellation_details: [],
   cancellation_details_loading: false,
-  confirm_cancellation: {},
+  confirm_cancellation: [],
   confirm_cancellation_loading: false,
   partial_cancellation_details: {},
   partial_cancellation_details_loading: false,
   confirm_partial_cancellation: {},
   confirm_partial_cancellation_loading: false,
-
+  route_middle_city_sequence: [],
+  route_middle_city_sequence_loading: false,
   from_city: "",
   to_city: "",
   selectedTabMainHome: "buses",
@@ -131,7 +136,7 @@ export const BusProvider = ({ children }) => {
           type: GET_SOURCE_SUCCESS,
           payload: res.data.data.ITSSources,
         });
-        console.log("Get Source log", res.data.data.ITSSources);
+        // console.log("Get Source log", res.data.data.ITSSources);
       }
     } catch (error) {
       dispatch({ type: GET_SOURCE_ERROR });
@@ -211,12 +216,15 @@ export const BusProvider = ({ children }) => {
           Accept: ACCEPT_HEADER,
         },
       });
+      console.log("GetAmenitiesApi response", res.data);
+
       if (res.data.status == 1) {
         dispatch({
           type: GET_AMENITIES_SUCCESS,
           payload: res.data.data.GetAmenities,
         });
       }
+      return res.data.data.GetAmenities;
     } catch (error) {
       dispatch({ type: GET_AMENITIES_ERROR });
       console.log("Error GetAmenitiesApi", error);
@@ -324,18 +332,18 @@ export const BusProvider = ({ children }) => {
 
   const TicketStatusApi = async (params) => {
     dispatch({ type: GET_TICKET_STATUS_BEGIN });
-
     try {
       const res = await axios.post(dynamic_curl, params, {
         headers: {
           Accept: ACCEPT_HEADER,
         },
       });
-      if (res.data.status == 1) {
+      if (res.data.status == 0) {
         dispatch({
           type: GET_TICKET_STATUS_SUCCESS,
-          payload: res.data.data.TicketPrintData,
+          payload: res.data.data,
         });
+        return res.data.data;
       }
     } catch (error) {
       dispatch({ type: GET_TICKET_STATUS_ERROR });
@@ -356,7 +364,7 @@ export const BusProvider = ({ children }) => {
         },
       });
       if (res.data.success == 1) {
-        console.log("Ticket booking data", res.data.data);
+        // console.log("Ticket booking data", res.data.data);
         dispatch({
           type: GET_TICKET_BOOKING_DATA_SUCCESS,
           payload: res.data.data,
@@ -369,17 +377,20 @@ export const BusProvider = ({ children }) => {
   };
 
   const ticketCancelDetailsapi = async (params) => {
+    const token = JSON.parse(localStorage.getItem("is_token"));
     dispatch({ type: CANCELLATION_DETAILS_BEGIN });
     try {
       const res = await axios.post(dynamic_curl, params, {
         headers: {
           Accept: ACCEPT_HEADER,
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      if (res.data.status == 1) {
+      if (res.data.status == 0) {
         dispatch({
           type: CANCELLATION_DETAILS_SUCCESS,
+          payload: res.data.data,
         });
       }
     } catch (error) {
@@ -450,20 +461,22 @@ export const BusProvider = ({ children }) => {
     }
   };
 
-  const confirmCancellation = async (params) => {
+  const confirmCancellation = async (params, token) => {
     dispatch({ type: CONFIRM_CANCELLATION_BEGIN });
 
     try {
       const res = await axios.post(dynamic_curl, params, {
         headers: {
           Accept: ACCEPT_HEADER,
+          Authorization: `Bearer ${token}`,
         },
       });
-      if (res.data.status == 1) {
+      if (res.data.status == 0) {
         dispatch({
           type: CONFIRM_CANCELLATION_SUCCESS,
-          // payload: res.data.data.ConfirmCancellation,
+          payload: res.data.data,
         });
+        return res.data.data;
       }
     } catch (error) {
       dispatch({ type: CONFIRM_CANCELLATION_ERROR });
@@ -480,10 +493,11 @@ export const BusProvider = ({ children }) => {
           Accept: ACCEPT_HEADER,
         },
       });
-      if (res.data.status == 1) {
+      console.log("Partial Cancellation Response", res.data);
+      if (res.data.status == 0) {
         dispatch({
           type: PARTIAL_CANCELLATION_DETAILS_SUCCESS,
-          // payload: res.data.data.PartialCancellationDetails,
+          payload: res.data.data,
         });
       }
     } catch (error) {
@@ -493,18 +507,29 @@ export const BusProvider = ({ children }) => {
   };
 
   const confirmPartialCancellation = async (params) => {
+    const token = JSON.parse(localStorage.getItem("is_token"));
+
     dispatch({ type: CONFIRM_PARTIAL_CANCELLATION_BEGIN });
     try {
       const res = await axios.post(dynamic_curl, params, {
         headers: {
           Accept: ACCEPT_HEADER,
+          Authorization: `Bearer ${token}`,
         },
       });
-      if (res.data.status == 1) {
+
+      console.log("Confirm Partial Cancellation Response", res.data);
+      if (res.data.status == 0) {
         dispatch({
           type: CONFIRM_PARTIAL_CANCELLATION_SUCCESS,
-          // payload: res.data.data.ConfirmPartialCancellation,
+          payload: res.data.data,
         });
+        if (res.data.data.status == 1) {
+          toast.success(res.data.data.statusMsg);
+        } else {
+          toast.error(res.data.data.statusMsg);
+        }
+        return res.data.data;
       }
     } catch (error) {
       dispatch({ type: CONFIRM_PARTIAL_CANCELLATION_ERROR });
@@ -512,6 +537,25 @@ export const BusProvider = ({ children }) => {
     }
   };
 
+  const GetRouteMiddleCitySequence = async (params) => {
+    dispatch({ type: GET_ROUTE_MIDDLE_CITY_SEQUENCE_BEGIN });
+    try {
+      const res = await axios.post(dynamic_curl, params, {
+        headers: {
+          Accept: ACCEPT_HEADER,
+        },
+      });
+      if (res.data.status == 0) {
+        dispatch({
+          type: GET_ROUTE_MIDDLE_CITY_SEQUENCE_SUCCESS,
+          payload: res.data.data,
+        });
+      }
+    } catch (error) {
+      dispatch({ type: GET_ROUTE_MIDDLE_CITY_SEQUENCE_ERROR });
+      console.log("Error in GetRouteMiddleCitySequence api ", error);
+    }
+  };
   const Fromcity = (from_city) => {
     dispatch({ type: FROM_CITY, payload: from_city });
   };
@@ -542,6 +586,11 @@ export const BusProvider = ({ children }) => {
         TabSelection,
         TicketStatusApi,
         ticketBookingDataApi,
+        ticketCancelDetailsapi,
+        confirmCancellation,
+        partialCancellation,
+        confirmPartialCancellation,
+        GetRouteMiddleCitySequence,
       }}
     >
       {children}

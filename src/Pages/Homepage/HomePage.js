@@ -77,7 +77,7 @@ const HomePage = () => {
 
     SetLogin(islogin);
 
-    console.log("getCompanyId", getCompanyId);
+    console.log("getCompanyId", companyid);
 
     var role = localStorage.getItem("is_role");
     if (islogin) {
@@ -188,7 +188,7 @@ const HomePage = () => {
 
     const data = await getCancellationPolicyApi(formdata);
     if (data) {
-      console.log("cancellation data", data);
+      // console.log("cancellation data", data);
     }
   };
 

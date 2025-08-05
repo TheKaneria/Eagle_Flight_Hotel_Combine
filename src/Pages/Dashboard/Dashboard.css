@@ -87,7 +87,7 @@
   color: #fff;
 }
 .table-div {
-  /* margin-top: 1rem; */
+  /* margin: 1rem 0; */
 }
 .infobtn {
   cursor: pointer;
@@ -506,7 +506,7 @@
   object-fit: contain;
 }
 .completesection {
-  padding: 30px 75px;
+  padding: 20px 50px;
   display: flex;
   width: 100%;
   flex-direction: column;
@@ -526,6 +526,51 @@
   color: white;
   font-weight: bold;
   border-radius: 20px;
+}
+.completeCancelBokingbtn {
+  text-decoration: none;
+  background: linear-gradient(135deg, #ff690f 0%, #e8381b 100%);
+  padding: 10px 10px;
+  color: white;
+  font-weight: bold;
+  width: 165px;
+  border-radius: 20px;
+  align-self: center;
+  cursor: pointer;
+}
+
+.custom-cancel-modal-content {
+  border-radius: 0.5rem;
+  width: 100%;
+  margin: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Optional: if ReactModal adds overflow */
+.ReactModal__Content {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.cancel-btn,
+.keep-btn {
+  transition: background-color 0.2s ease-in-out;
+  min-width: 120px;
+}
+
+.cancel-btn:hover {
+  background-color: #dc3545 !important;
+}
+
+.keep-btn:hover {
+  background-color: #e2e6ea !important;
 }
 @media screen and (max-width: 992px) {
   .table-div {
@@ -759,6 +804,28 @@
 
   .completesection {
     padding: 30px 12px !important;
+  }
+  .custom-cancel-modal-content {
+    padding: 1rem;
+  }
+
+  .modal-title {
+    font-size: 1.1rem;
+  }
+
+  .modal-body p {
+    font-size: 0.9rem;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .cancel-btn,
+  .keep-btn {
+    width: 100%;
   }
 }
 

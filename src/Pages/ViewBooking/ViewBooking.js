@@ -5,9 +5,10 @@ import PathHero from "../../Components/PathHeroComponent/PathHero";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { MdLuggage } from "react-icons/md";
-import { FaUser, FaPhoneAlt } from "react-icons/fa";
+import { FaUser, FaPhoneAlt, FaChevronDown } from "react-icons/fa";
+import { TbCancel } from "react-icons/tb";
 import { IoMdMail } from "react-icons/io";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import moment from "moment";
 import { GoDotFill } from "react-icons/go";
 import { CiCircleChevDown, CiCircleChevUp } from "react-icons/ci";
@@ -23,11 +24,15 @@ import { SiGmail } from "react-icons/si";
 import {
   ACCEPT_HEADER,
   bookseatdetails,
+  confirmpartialcancellation,
   FetchTicketPrintData,
+  partialcancellationdetails,
   ticketcurl,
+  TicketStatus,
   verifyCall,
 } from "../../Utils/Constant";
 import { useBusContext } from "../../Context/bus_context";
+import ReactModal from "react-modal";
 
 const ViewBooking = () => {
   const location = useLocation();
@@ -38,8 +43,14 @@ const ViewBooking = () => {
   const [data2, setData2] = useState(null);
   const [loading2, setLoading2] = useState(false);
   const [isPastDeparture, setIsPastDeparture] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [selectedSeat, setSelectedSeat] = useState(null);
+  const [checkedSeats, setCheckedSeats] = useState([]);
 
-  console.log("view booking ma data", data);
+  console.log("data", data);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (data?.departure_date && data?.departure_time) {
@@ -47,12 +58,14 @@ const ViewBooking = () => {
         `${data.departure_date}T${data.departure_time}`
       );
       const now = new Date();
-
       if (departureDateTime < now) {
         setIsPastDeparture(true); // hide button
       }
     }
   }, [data]);
+
+  // console.log("View Booking Data", data);
+  console.log("Selected Seat", selectedIndex);
 
   const {
     selectedTabMainHome,
@@ -62,14 +75,15 @@ const ViewBooking = () => {
     fetchTicketPrintDataApi,
     fetch_ticket_print_loading,
     fetch_ticket_print_data,
+    partialCancellation,
+    partial_cancellation_details,
+    partial_cancellation_details_loading,
+    confirmPartialCancellation,
+    confirm_partial_cancellation,
+    confirm_partial_cancellation_loading,
+    TicketStatusApi,
+    ticket_status,
   } = useBusContext();
-
-  useEffect(() => {
-    window.scroll(0, 0);
-    if (data?.get_con === 0) {
-      BookingDetails();
-    }
-  }, []);
 
   useEffect(() => {
     if (book_seat_details_data.length <= 0) {
@@ -94,6 +108,26 @@ const ViewBooking = () => {
   const toggleview2 = () => {
     setViewopen2(!viewopen2);
   };
+
+  const getTicketStatus = async () => {
+    const formdata = new FormData();
+    await formdata.append("type", "POST");
+    await formdata.append("url", TicketStatus);
+    await formdata.append("verifyCall", verifyCall);
+    await formdata.append("pnrNo", data?.PNRNO);
+    const datas = await TicketStatusApi(formdata);
+    if (datas) {
+      console.log("get ticket status data", datas);
+    }
+  };
+
+  useEffect(() => {
+    window.scroll(0, 0);
+    if (data?.get_con === 0) {
+      BookingDetails();
+    }
+    getTicketStatus();
+  }, []);
 
   // const handleDownload = async () => {
   //   const element = invoiceRef.current;
@@ -261,6 +295,32 @@ const ViewBooking = () => {
     });
   };
 
+  const handleSelectSeat = async (seatNo) => {
+    const formdata = new FormData();
+    formdata.append("type", "POST");
+    formdata.append("url", partialcancellationdetails);
+    formdata.append("verifyCall", verifyCall);
+    formdata.append("pnrNo", data?.PNRNO);
+    formdata.append("SeatNo", seatNo);
+
+    await partialCancellation(formdata);
+  };
+
+  const handleConfirmPartialCancellation = async () => {
+    const formdata = new FormData();
+    formdata.append("type", "POST");
+    formdata.append("url", confirmpartialcancellation);
+    formdata.append("verifyCall", verifyCall);
+    formdata.append("PNRNo", data?.PNRNO);
+    formdata.append("SeatNo", checkedSeats.join(","));
+    const datao = await confirmPartialCancellation(formdata);
+
+    if (datao) {
+      setModalOpen(false);
+      navigate("/dashboard");
+    }
+  };
+
   return (
     <div>
       <Helmet>
@@ -296,97 +356,130 @@ const ViewBooking = () => {
                         <>
                           {/* {data?.map((item, index) => { */}
                           {/* return ( */}
-                          <div>
-                            <div className="d-flex align-items-center mb-3">
-                              <div className="fw-bold viewbktitle">
-                                Phone No :
+                          <div className="row align-items-center justify-content-between">
+                            <div className="col-md-9">
+                              <div className="d-flex align-items-center mb-3">
+                                <div className="fw-bold viewbktitle">
+                                  Phone No :
+                                </div>
+                                <div className="viewbkitm">{data?.phone}</div>
                               </div>
-                              <div className="viewbkitm">{data?.phone}</div>
-                            </div>
-                            <div className="d-flex align-items-center mb-3">
-                              <div className="fw-bold viewbktitle">Email :</div>
-                              <div
-                                className="viewbkitm"
-                                style={{ textTransform: "none" }}
-                              >
-                                {data?.email}
-                              </div>
-                            </div>
-                            <div className="d-flex align-items-center mb-3">
-                              <div className="fw-bold viewbktitle">
-                                PNR NO :
-                              </div>
-                              <div className="viewbkitm">{data?.PNRNO}</div>
-                            </div>
-
-                            <div className="d-flex align-items-center mb-3">
-                              <div className="fw-bold viewbktitle">
-                                Journey Date :
-                              </div>
-                              <div className="viewbkitm">
-                                {data.departure_date}
-                              </div>
-                            </div>
-                            {data?.child?.length > 0 && (
-                              <div className="passenger-table-section mt-4">
-                                <h5
-                                  className="fw-bold mb-2"
-                                  style={{ color: "var(--color-orange)" }}
+                              <div className="d-flex align-items-center mb-3">
+                                <div className="fw-bold viewbktitle">
+                                  Email :
+                                </div>
+                                <div
+                                  className="viewbkitm"
+                                  style={{ textTransform: "none" }}
                                 >
-                                  Passenger Details
-                                </h5>
-
-                                <div className="table-responsive-scroll">
-                                  <table className="table table-bordered">
-                                    <thead>
-                                      <tr>
-                                        <th>Name</th>
-                                        <th>Mobile Number</th>
-                                        <th>Seat No</th>
-                                        <th>Gender</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {data.child.map((passenger, idx) => {
-                                        const [seatNo, genderCode] =
-                                          passenger.seatNames?.split(",") || [];
-                                        const gender =
-                                          genderCode === "F"
-                                            ? "Female"
-                                            : "Male";
-
-                                        return (
-                                          <tr key={idx}>
-                                            <td>{passenger.paxName}</td>
-                                            <td>{passenger.mobileNo}</td>
-                                            <td>{seatNo}</td>
-                                            <td>{gender}</td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
+                                  {data?.email}
                                 </div>
                               </div>
-                            )}
+                              <div className="d-flex align-items-center mb-3">
+                                <div className="fw-bold viewbktitle">
+                                  PNR NO :
+                                </div>
+                                <div className="viewbkitm">{data?.PNRNO}</div>
+                              </div>
+                              <div className="d-flex align-items-center mb-3">
+                                <div className="fw-bold viewbktitle">
+                                  Journey Date :
+                                </div>
+                                <div className="viewbkitm">
+                                  {data.departure_date}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="col-md-2">
+                              {ticket_status.length !== 0 && (
+                                <div
+                                  className="text-primary fw-bold rounded-pill p-2 w-75 text-center"
+                                  style={{ backgroundColor: "#c1e5fcff" }}
+                                >
+                                  {ticket_status[0]?.Status}
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          {data?.child?.length > 0 && (
+                            <div className="passenger-table-section mt-4">
+                              <h5
+                                className="fw-bold mb-2"
+                                style={{ color: "var(--color-orange)" }}
+                              >
+                                Passenger Details
+                              </h5>
+
+                              <div className="table-responsive-scroll">
+                                <table className="table table-bordered">
+                                  <thead>
+                                    <tr>
+                                      <th>Name</th>
+                                      <th>Mobile Number</th>
+                                      <th>Seat No</th>
+                                      <th>Gender</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {data.child.map((passenger, idx) => {
+                                      const [seatNo, genderCode] =
+                                        passenger.seatNames?.split(",") || [];
+                                      const gender =
+                                        genderCode === "F" ? "Female" : "Male";
+
+                                      return (
+                                        <tr
+                                          key={idx}
+                                          className={
+                                            passenger.is_cancel === 1
+                                              ? "cancelled-row"
+                                              : ""
+                                          }
+                                        >
+                                          <td>{passenger.paxName}</td>
+                                          <td>{passenger.mobileNo}</td>
+                                          <td>{seatNo}</td>
+                                          <td>{gender}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
                           {/* ); */}
                           {/* })} */}
                           {!isPastDeparture && (
-                            <div className="Print_batan_div">
-                              <div
-                                className="print_batan"
-                                onClick={() => BusTicketPrintData()}
-                                style={{
-                                  cursor: fetch_ticket_print_loading
-                                    ? "not-allowed"
-                                    : "default",
-                                  opacity: fetch_ticket_print_loading ? 0.5 : 1,
-                                }}
-                              >
-                                {fetch_ticket_print_loading
-                                  ? "Loading..."
-                                  : "Print"}
+                            <div className="d-flex justify-content-center gap-5">
+                              <div className="Print_batan_div">
+                                <div
+                                  className="print_batan"
+                                  onClick={() => BusTicketPrintData()}
+                                  style={{
+                                    cursor: fetch_ticket_print_loading
+                                      ? "not-allowed"
+                                      : "default",
+                                    opacity: fetch_ticket_print_loading
+                                      ? 0.5
+                                      : 1,
+                                  }}
+                                >
+                                  {fetch_ticket_print_loading
+                                    ? "Loading..."
+                                    : "Print"}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="Print_batan_div">
+                                  <div
+                                    className="print_batan"
+                                    onClick={() => setModalOpen(true)}
+                                  >
+                                    Cancel Seat
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1274,6 +1367,190 @@ const ViewBooking = () => {
           )}
         </div>
       </section>
+
+      <ReactModal
+        isOpen={modalOpen}
+        onRequestClose={() => setModalOpen(false)}
+        style={{
+          content: {
+            top: "50%",
+            left: "50%",
+            right: "auto",
+            bottom: "auto",
+            marginRight: "-50%",
+            transform: "translate(-50%, -50%)",
+            width: "90%",
+            maxWidth: "500px",
+            padding: "0",
+            border: "none",
+            borderRadius: "10px",
+            position: "relative",
+            overflowY: "auto",
+          },
+          overlay: {
+            zIndex: 10000,
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+          },
+        }}
+      >
+        <div className="bg-white p-4 custom-cancel-modal-content">
+          {/* Modal Header */}
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5 className="modal-title text-dark">Confirm Cancellation</h5>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={() => {
+                setModalOpen(false);
+                setSelectedIndex(null);
+                setSelectedSeat(null);
+              }}
+              aria-label="Close"
+            ></button>
+          </div>
+
+          {/* Modal Body */}
+          <div className="modal-body">
+            <p className="text-muted">
+              Are you sure you want to cancel the booking
+            </p>
+            {data?.child.map((item, index) => {
+              const isExpanded = selectedSeat === item?.seatDetails;
+              const isChecked = checkedSeats.includes(item?.seatDetails); // ✅ check if selected
+
+              const handleCheckboxChange = () => {
+                const seatNo = item?.seatDetails;
+                if (checkedSeats.includes(seatNo)) {
+                  // Uncheck (remove seat)
+                  setCheckedSeats(checkedSeats.filter((s) => s !== seatNo));
+                } else {
+                  // Check (add seat)
+                  setCheckedSeats([...checkedSeats, seatNo]);
+                  handleSelectSeat(seatNo);
+                }
+              };
+
+              return (
+                <div key={index}>
+                  {/* Main Card */}
+                  <div
+                    className={`p-3 mb-2 position-relative border rounded d-flex justify-content-between align-items-center  ${
+                      item.is_cancel === 1
+                        ? "bg-secondary bg-opacity-25 disabled-card"
+                        : isChecked
+                        ? "canceltikbox"
+                        : "bg-light"
+                    }`}
+                    style={{
+                      transition: "0.3s",
+                      cursor: item.is_cancel === 1 ? "not-allowed" : "auto",
+                    }}
+                  >
+                    {/* Checkbox + Passenger Info */}
+                    <div className="d-flex align-items-start">
+                      <input
+                        type="checkbox"
+                        className="form-check-input mt-1 me-3"
+                        checked={isChecked}
+                        disabled={item.is_cancel === 1}
+                        onChange={handleCheckboxChange}
+                      />
+                      <div>
+                        <div>
+                          <span className="fw-bold">Name :</span>{" "}
+                          {item?.paxName}
+                        </div>
+                        <div>
+                          <span className="fw-bold">Seat No. :</span>{" "}
+                          {item?.seatDetails}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Chevron Icon */}
+                    <FaChevronDown
+                      className={`ms-2 cursor-pointer ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
+                      onClick={() => {
+                        if (item.is_cancel !== 1) {
+                          handleSelectSeat(item?.seatDetails);
+                          setSelectedSeat(
+                            isExpanded ? null : item?.seatDetails
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* Expand View */}
+                  {isExpanded && (
+                    <>
+                      {partial_cancellation_details_loading ? (
+                        <div className="d-flex justify-content-center align-items-center w-100">
+                          <div className="loader">
+                            <div className="spinner"></div>
+                            <p className="loading-text">Loading...</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-white border rounded p-3 mb-3">
+                          <p className="mb-3">
+                            Extra details or actions for Seat No:{" "}
+                            <strong>{item?.seatDetails}</strong>
+                          </p>
+                          <p className="mb-0">
+                            <span
+                              style={{ color: "black", fontWeight: "normal" }}
+                            >
+                              Total Amount:
+                            </span>{" "}
+                            ₹ {partial_cancellation_details?.cancelAmount}
+                          </p>
+                          <p style={{ color: "green", fontWeight: "bold" }}>
+                            <span
+                              style={{ color: "black", fontWeight: "normal" }}
+                            >
+                              Refundable Amount :
+                            </span>{" "}
+                            ₹{" "}
+                            {partial_cancellation_details?.refundAmount.toFixed(
+                              2
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Modal Footer */}
+          <div className="modal-footer border-0">
+            <button
+              type="button"
+              className="btn btn-light keep-btn"
+              onClick={() => setModalOpen(false)}
+            >
+              No, Keep Booking
+            </button>
+            <button
+              type="button"
+              disabled={confirm_partial_cancellation_loading}
+              className="btn btn-danger cancel-btn"
+              onClick={() => {
+                handleConfirmPartialCancellation();
+              }}
+            >
+              {confirm_partial_cancellation_loading
+                ? "Loading..."
+                : "Yes, Cancel Booking"}
+            </button>
+          </div>
+        </div>
+      </ReactModal>
     </div>
   );
 };

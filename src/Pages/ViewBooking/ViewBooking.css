@@ -121,7 +121,6 @@
   align-items: center;
   justify-content: center;
   margin-top: 3rem;
-  cursor: pointer;
 }
 .print_batan {
   width: 150px;
@@ -134,7 +133,7 @@
   color: white;
   font-weight: bold;
   border-radius: 10px;
-  cursor: pointer;
+  cursor: pointer !important;
 }
 
 .viewbookingnodata {
@@ -142,11 +141,26 @@
   color: #e8381b;
   text-align: center;
   font-size: 18px;
+  margin: 1.5rem 0;
 }
 
 .table-responsive-scroll {
   width: 100%;
   overflow-x: auto;
+}
+.canceltikbox {
+  border: 1px solid #e8381b !important;
+  background-color: #f0664d;
+  color: white;
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+  transition: transform 0.3s ease;
+}
+
+.cancelled-row {
+  background-color: #f8d7da; /* light red */
 }
 
 @media screen and (max-width: 991px) {
@@ -231,5 +245,10 @@
   }
   .viewbkitm {
     font-size: 16px;
+  }
+  .print_batan {
+    font-size: 16px;
+    padding: 10px;
+    width: 150px;
   }
 }

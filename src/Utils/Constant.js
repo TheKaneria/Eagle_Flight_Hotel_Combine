@@ -71,7 +71,7 @@ export const FetchTicketPrintData = BusBaseUrl + "FetchTicketPrintData";
 export const TicketStatus = BusBaseUrl + "TicketStatus";
 
 export const canceldetails = BusBaseUrl + "CancelDetails";
-export const confirmCancellation = BusBaseUrl + "ConfirmCancellation";
+export const confirmCancellationUrl = BusBaseUrl + "ConfirmCancellation";
 export const cancellationPolicy = BusBaseUrl + "GetCancellationPolicy";
 export const GetJourneyDateWiseCancellationPolicy =
   BusBaseUrl + "GetJourneyDateWiseCancellationPolicy";
@@ -81,3 +81,6 @@ export const partialcancellationdetails =
   BusBaseUrl + "GetPartialCancellationDetails";
 export const confirmpartialcancellation =
   BusBaseUrl + "ConfirmPartialCancellation";
+
+export const getRouteMiddleCitySequence =
+  BusBaseUrl + "GetRouteMiddleCitySequence";
