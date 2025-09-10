@@ -13,13 +13,14 @@ import SeatSelection from "./Pages/SeatSelection/SeatSelection";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ViewBookingBus from "./Pages/ViewBooking/ViewBookingBus";
+import PassengerBooking from "./Pages/NewBookingPage/PassengerBooking";
+import PaymentStatus from "./Pages/Payment/PaymentStatus";
+import Payment from "./Pages/Payment/Payment";
+import PaymentStatus2 from "./Pages/Payment/designtest";
 
 function App() {
   return (
-    <BrowserRouter
-      basename="busticket"
-      future={{ v7_startTransition: true }}
-    >
+    <BrowserRouter basename="busticket" future={{ v7_startTransition: true }}>
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -34,6 +35,10 @@ function App() {
         <Route path="/contactus" element={<ContactUs />} />
         <Route path="/ViewBooking" element={<ViewBooking />} />
         <Route path="/ViewBookingBus" element={<ViewBookingBus />} />
+        <Route path="/newpassenger" element={<PassengerBooking />} />
+        <Route path="/Payment" element={<Payment />} />
+        <Route path="/payment-status" element={<PaymentStatus />} />
+        <Route path="/payment-status2" element={<PaymentStatus2 />} />
       </Routes>
       <Footer />
       <ToastContainer position="top-right" />

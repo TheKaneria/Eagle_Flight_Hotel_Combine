@@ -449,6 +449,78 @@ const ViewBooking = () => {
                             </div>
                           )}
 
+                          {data?.payments && (
+                            <div className="payment-section mt-4">
+                              <h5
+                                className="fw-bold mb-2"
+                                style={{ color: "var(--color-orange)" }}
+                              >
+                                Payment Details
+                              </h5>
+
+                              <div className="table-responsive-scroll">
+                                <table className="table table-bordered">
+                                  <tbody>
+                                    <tr>
+                                      <th>PNR No</th>
+                                      <td>{data.payments.PNRNO}</td>
+                                    </tr>
+                                    <tr>
+                                      <th>Order ID</th>
+                                      <td>{data.payments.order_id}</td>
+                                    </tr>
+                                    <tr>
+                                      <th>Tracking ID</th>
+                                      <td>{data.payments.tracking_id}</td>
+                                    </tr>
+                                    <tr>
+                                      <th>Bank Ref No</th>
+                                      <td>{data.payments.bank_ref_no}</td>
+                                    </tr>
+                                    <tr>
+                                      <th>Status</th>
+                                      <td className="fw-bold text-success">
+                                        {data.payments.order_status}
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <th>Payment Mode</th>
+                                      <td>{data.payments.payment_mode}</td>
+                                    </tr>
+                                    <tr>
+                                      <th>Amount</th>
+                                      <td>
+                                        {data.payments.amount}{" "}
+                                        {data.payments.currency}
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <th>Transaction Date</th>
+                                      <td>
+                                        {JSON.parse(data.payments.response)
+                                          ?.trans_date || "-"}
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <th>Billing Name</th>
+                                      <td>
+                                        {JSON.parse(data.payments.response)
+                                          ?.billing_name || "-"}
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <th>Billing Email</th>
+                                      <td>
+                                        {JSON.parse(data.payments.response)
+                                          ?.billing_email || "-"}
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
                           {/* ); */}
                           {/* })} */}
                           {!isPastDeparture && (

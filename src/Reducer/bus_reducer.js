@@ -62,6 +62,7 @@ import {
   GET_CURRENT_ACCOUNT_BALANCE_BEGIN,
   GET_CURRENT_ACCOUNT_BALANCE_SUCCESS,
   GET_CURRENT_ACCOUNT_BALANCE_ERROR,
+  CLEAR_ROUTE_DATA,
 } from "../Actions";
 
 const bus_reducer = (state, action) => {
@@ -229,7 +230,15 @@ const bus_reducer = (state, action) => {
   }
 
   if (action.type === SELECTED_TAB) {
-    return { ...state, selectedTab: action.payload };
+    return {
+      ...state,
+      selectedTab: action.payload,
+      selectedTabMainHome: action.payload,
+    };
+  }
+
+  if (action.type === CLEAR_ROUTE_DATA) {
+    return { ...state, route_data: [] };
   }
 
   //cancellation bus tikit

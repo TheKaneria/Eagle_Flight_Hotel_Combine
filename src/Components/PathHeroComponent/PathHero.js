@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 import { Link, useLocation } from "react-router-dom";
 
-const PathHero = ({ name,getSelectedTabService }) => {
+const PathHero = ({ name, getSelectedTabService }) => {
   const location = useLocation();
 
   const path = location.pathname.split("/")[1];
@@ -11,13 +11,13 @@ const PathHero = ({ name,getSelectedTabService }) => {
 
   return (
     <section
-  className={`container-fluid ${
-    getSelectedTabService === "flights" ? "about_main" : "about_main_bus"
-  } mb-5`}
->
+      className={`container-fluid ${
+        getSelectedTabService === "flights" ? "about_main" : "about_main_bus"
+      } `}
+    >
       <div className="bg_color">
         <div className="container">
-          <div className="row banner-area mb-5">
+          <div className="row banner-area">
             <div className="col-12 col-md-4">
               {/* <img src={images.bags} alt="" className="left-imge" /> */}
             </div>

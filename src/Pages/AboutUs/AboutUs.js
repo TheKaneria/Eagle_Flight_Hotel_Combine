@@ -12,16 +12,16 @@ const AboutUs = () => {
     window.scroll(0, 0);
   }, []);
 
-  const { selectedTabMainHome } = useBusContext();
+  const { selectedTab } = useBusContext();
 
   return (
     <>
       <Helmet>
         <title>About | Airline Booking</title>
       </Helmet>
-      <PathHero name={"About Us"} />
+      <PathHero name={"About Us"} getSelectedTabService={selectedTab} />
 
-      {selectedTabMainHome === "flights" ? (
+      {selectedTab === "flights" ? (
         <section className="container videosection">
           <div className="row align-items-center justify-content-center pt-4 gap-3">
             <div className="col-lg-8 col-12 text-center">

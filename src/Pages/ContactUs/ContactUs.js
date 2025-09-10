@@ -8,6 +8,7 @@ import { SiGmail } from "react-icons/si";
 import { Helmet } from "react-helmet";
 import emailjs from "emailjs-com";
 import Notification from "../../Utils/Notification";
+import { useBusContext } from "../../Context/bus_context";
 
 const ContactUs = () => {
   const [name, setName] = useState("");
@@ -15,6 +16,8 @@ const ContactUs = () => {
   const [num, setNumber] = useState("");
   const [sub, setSubject] = useState("");
   const [message, setMessage] = useState("");
+
+  const { selectedTab } = useBusContext();
 
   useEffect(() => {
     window.scroll(0, 0);
@@ -64,7 +67,7 @@ const ContactUs = () => {
         <title>Contact | Airline Booking</title>
       </Helmet>
 
-      <PathHero name={"Contact Us"} />
+      <PathHero name={"Contact Us"} getSelectedTabService={selectedTab} />
       {/* <section className="container shadow formcont p-4">
         <div className="row align-items-center justify-content-center z-3">
           <div className="col-12 col-lg-8 text-center mb-3">

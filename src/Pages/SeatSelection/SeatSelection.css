@@ -223,6 +223,7 @@
   width: 48%;
   box-shadow: 0px 5px 15px 0px rgba(0, 0, 0, 0.15);
   height: fit-content !important;
+  border: 1px solid orangered;
 }
 
 /* sleeper hatu he aa css */
@@ -341,6 +342,14 @@
   align-items: center;
   vertical-align: middle;
   justify-content: space-between;
+  height: 40px;
+}
+.sleeper_flex_front_UP {
+  display: flex;
+  align-items: center;
+  vertical-align: middle;
+  justify-content: center;
+  height: 50px;
 }
 
 .bottom-sheet {
@@ -872,6 +881,18 @@
   .pickupdrop-container {
     width: 100%;
   }
+  .layout-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .columnn {
+    width: 300px;
+  }
+  .seat-row {
+    margin-bottom: 1rem;
+  }
 }
 
 @media screen and (max-width: 1070px) {
@@ -946,10 +967,10 @@
   .layout-container {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: center;
     gap: 40px;
     padding: 20px;
-    width: 45%;
+    /* width: 45%; */
   }
   .columnn {
     width: 310px;

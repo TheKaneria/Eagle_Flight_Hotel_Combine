@@ -286,6 +286,11 @@
   font-weight: bold;
 }
 
+.resp_booking_details_flight_img_return {
+  /* width: 115px; */
+  transform: rotate(180deg);
+}
+
 @media screen and (max-width: 768px) {
   .flight-box {
     display: flex;
@@ -336,6 +341,11 @@
     width: 115px;
   }
 
+  .resp_booking_details_flight_img_return {
+    width: 115px;
+    transform: rotate(180deg);
+  }
+
   .tab-main {
     width: 100%;
   }
@@ -366,8 +376,6 @@
   color: white !important;
   border-radius: 50%;
 }
-
-
 
 /* Add New Flight Details Page CSS */
 
@@ -572,12 +580,530 @@
 
 /*  */
 
-.sing_date_time_header{
-
+.sing_date_time_header {
 }
 
-.flight_header_inner{
+.flight_header_inner {
   display: flex;
   flex-direction: column;
   align-items: baseline;
+}
+
+/* TicketBookingDetails.css */
+
+.booking-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+  padding: 2rem 1rem;
+}
+
+.booking-wrapper {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.booking-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .booking-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Form Card Styles */
+.form-card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.form-header {
+  background: linear-gradient(90deg, #2563eb 0%, #4338ca 100%);
+  padding: 1.5rem 2rem;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-icon {
+  color: white;
+  width: 2rem;
+  height: 2rem;
+}
+
+.header-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+}
+
+.header-subtitle {
+  color: #bfdbfe;
+  margin: 0.25rem 0 0 0;
+}
+
+.form-content {
+  padding: 2rem;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.form-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #2563eb;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: transparent;
+  ring: 2px solid #3b82f6;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.submit-container {
+  display: flex;
+  justify-content: center;
+  padding-top: 1.5rem;
+}
+
+.submit-button {
+  padding: 1rem 2rem;
+  background: linear-gradient(90deg, #2563eb 0%, #4338ca 100%);
+  color: white;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.submit-button:hover {
+  background: linear-gradient(90deg, #1d4ed8 0%, #3730a3 100%);
+  transform: scale(1.05);
+}
+
+.submit-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Details Card Styles */
+.details-card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 1.5rem;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.details-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 1.5rem;
+}
+
+.airline-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.airline-logo {
+  width: 4rem;
+  height: 4rem;
+  object-fit: contain;
+}
+
+.default-airline-icon {
+  color: #2563eb;
+}
+
+.airline-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.segments-container {
+  margin-bottom: 1.5rem;
+}
+
+.segment-card {
+  border: 1px solid #e5e7eb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  background-color: #f9fafb;
+  margin-bottom: 1rem;
+}
+
+.segment-route {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.route-text {
+  font-weight: 500;
+  color: #374151;
+}
+
+.segment-time {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.segment-details {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0.5rem 0 0 0;
+}
+
+.price-section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.price-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #1f2937;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.price-amount {
+  font-weight: 500;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.5rem;
+  color: #1f2937;
+}
+
+.total-amount {
+  color: #2563eb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .booking-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .form-header {
+    padding: 1rem;
+  }
+
+  .form-content {
+    padding: 1rem;
+  }
+
+  .details-card {
+    padding: 1rem;
+  }
+
+  .input-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Airline Add-ons Modal Styles */
+
+.addon-modal-content {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.addon-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px 32px;
+  text-align: center;
+  position: relative;
+}
+
+.addon-modal-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.addon-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: background-color 0.3s ease;
+}
+
+.addon-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.addon-modal-body {
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.addon-icon-main {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  color: white;
+  font-size: 36px;
+}
+
+.addon-main-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.addon-description {
+  font-size: 16px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0 0 32px 0;
+}
+
+.addon-services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.addon-service-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.addon-service-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+}
+
+.addon-service-icon.meals {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.addon-service-icon.baggage {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.addon-service-icon.seats {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.addon-service-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.addon-modal-footer {
+  padding: 24px 32px;
+  background: #f9fafb;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.addon-btn {
+  /* padding: 12px 32px; */
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  min-width: 120px;
+}
+
+.addon-btn-skip {
+  background: white;
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.addon-btn-skip:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #4b5563;
+}
+
+.addon-btn-yes {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.addon-btn-yes:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+}
+
+.addon-plane-icon {
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .addon-modal-content {
+    margin: 20px;
+    max-width: none;
+  }
+
+  .addon-modal-header,
+  .addon-modal-body,
+  .addon-modal-footer {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .addon-services-grid {
+    gap: 16px;
+  }
+
+  .addon-service-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .addon-main-title {
+    font-size: 24px;
+  }
+
+  .addon-modal-title {
+    font-size: 20px;
+  }
+}
+
+/* Additional utility classes for the trigger button */
+.addon-trigger-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.addon-trigger-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+}
+
+.addon-trigger-container {
+  padding: 50px;
+  text-align: center;
 }

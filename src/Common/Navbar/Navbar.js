@@ -22,6 +22,7 @@ import {
   TicketStatus,
   TicketStatusApi,
   verifyCall,
+  walletApi,
 } from "../../Utils/Constant";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { GrGoogle } from "react-icons/gr";
@@ -31,6 +32,7 @@ import { SiFacebook } from "react-icons/si";
 import { LOGIN_BEGIN_AIR_LIVE } from "../../Actions";
 import { useBusContext } from "../../Context/bus_context";
 import Notification from "../../Utils/Notification";
+import { useFlightContext } from "../../Context/flight_context";
 
 const customStyles = {
   content: {
@@ -51,8 +53,12 @@ const customStyles = {
   },
 };
 const Navbar = () => {
-  const { GetBookSeatDetailsApi, fetchTicketPrintDataApi, TicketStatusApi } =
-    useBusContext();
+  const {
+    GetBookSeatDetailsApi,
+    fetchTicketPrintDataApi,
+    TicketStatusApi,
+    selectedTab,
+  } = useBusContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalOpenBookTicket, setisModalOpenBookTicket] = useState(false);
@@ -178,7 +184,10 @@ const Navbar = () => {
     companyListBusApi,
     currentAccountBalanceApi,
     currentaccountbalance,
+    NewLoginAPi,
   } = useAuthContext();
+
+  const { GetBalance, balance_data } = useFlightContext();
 
   let navigate = useNavigate();
 
@@ -191,7 +200,9 @@ const Navbar = () => {
 
   useEffect(() => {
     currentAccountBalApi();
+    FlightBalance();
     companyListApi();
+    GetState();
   }, []);
 
   const handleSubmitPNR = () => {
@@ -256,8 +267,6 @@ const Navbar = () => {
     }
   };
 
-  // Login api
-
   const Login = async (e) => {
     // Create JSON object (Raw Data format)
     const params = {
@@ -290,8 +299,7 @@ const Navbar = () => {
     const data = await companyListBusApi(formdata);
   };
 
-  //  Current Account Balance API
-
+  //  Current Account Balance API BUS
   const currentAccountBalApi = async () => {
     const formdata = new FormData();
     await formdata.append("type", "POST");
@@ -302,6 +310,18 @@ const Navbar = () => {
     if (data) {
       // window.location.reload(false);
     }
+  };
+
+  //  Flight Balance
+  const FlightBalance = async () => {
+    const token = localStorage.getItem("accessToken");
+
+    const formdata = new FormData();
+    formdata.append("type", "GET");
+    formdata.append("url", walletApi);
+    formdata.append("url_token", `Bearer ${token}`);
+
+    await GetBalance(formdata);
   };
 
   // Login Air Live api
@@ -328,73 +348,71 @@ const Navbar = () => {
   };
 
   const LoGin = async (e, email) => {
-    console.log("EEEE", e);
+    try {
+      if (e == 0 || e === "0") {
+        if (getemail === "") {
+          alert("Enter the Email.....!");
+          return;
+        } else if (regEx.test(getemail) === false) {
+          alert("Enter the valid Email....!");
+          return;
+        } else {
+          const formdata = new FormData();
+          formdata.append("email", getemail);
+          formdata.append("login_type", e);
 
-    if (e == 0 || e === "0") {
-      if (getemail === "") {
-        alert("Enter the Email.....!");
-        return;
-      } else if (regEx.test(getemail) === false) {
-        alert("Enter the valid Email....!");
-        return;
-      } else {
-        console.log("check");
-
-        const formdata = new FormData();
-        await formdata.append("email", getemail);
-        await formdata.append("login_type", e);
-
-        const data = await Loginn(formdata);
-
-        console.log("ZEEL KANERIAAAAA", data);
-
-        if (data) {
-          console.log("data", data);
-          if (data.success == 1) {
+          const data = await Loginn(formdata);
+          if (data && data.success == 1) {
             setOtpCondition(true);
-          } else {
           }
         }
+      } else {
+        const formdata = new FormData();
+        formdata.append("email", email);
+        formdata.append("login_type", e);
+        const data = await Loginn(formdata);
+        if (data.success == 1) {
+          localStorage.setItem("is_login", JSON.stringify(true));
+          localStorage.setItem("logindata", JSON.stringify(data));
+          localStorage.setItem("is_token", JSON.stringify(data.token));
+          localStorage.setItem("is_id", JSON.stringify(data.user.id));
+          localStorage.setItem("is_user", JSON.stringify(data.user));
+          localStorage.setItem("is_role", JSON.stringify(data.user.role));
+          await NewLoginAPi();
+          await companyListApi();
+          window.location.reload();
+        }
       }
-    } else {
-      const formdata = new FormData();
-      await formdata.append("email", email);
-      await formdata.append("login_type", e);
-      const data = await Loginn(formdata);
-      if (data.success == 1) {
-        localStorage.setItem("is_login", JSON.stringify(true));
-        localStorage.setItem("logindata", JSON.stringify(data));
-        localStorage.setItem("is_token", JSON.stringify(data.token));
-        localStorage.setItem("is_id", JSON.stringify(data.user.id));
-        localStorage.setItem("is_user", JSON.stringify(data.user));
-        localStorage.setItem("is_role", JSON.stringify(data.user.role));
-        // Login();
-        companyListApi();
-        window.location.reload();
-      }
+    } catch (error) {
+      console.error("Error in LoGin:", error);
+      alert("An error occurred during login. Please try again.");
     }
   };
 
   const ConfirmOtp = async () => {
-    if (getpassword === "") {
-      alert("Enter OTP....!");
-      return;
-    } else {
-      const formdata = new FormData();
-      formdata.append("otp", getpassword);
-      const data = await confirmOtp(formdata);
-      if (data) {
-        if (data.success == 1) {
-          // Login();
-          companyListApi();
+    try {
+      if (getpassword === "") {
+        alert("Enter OTP....!");
+        return;
+      } else {
+        const formdata = new FormData();
+        formdata.append("otp", getpassword);
+        formdata.append("email", getemail);
+        const data = await confirmOtp(formdata);
 
+        if (data && data.success == 1) {
+          await NewLoginAPi();
+          await companyListApi();
           setIsModalOpen(false);
           setEmail("");
           setPassword("");
-          window.location.reload(false);
+          window.location.reload();
           // navigate("/profile-page");
         }
       }
+    } catch (error) {
+      console.error("Error in ConfirmOtp:", error);
+      alert("An error occurred during OTP confirmation. Please try again.");
     }
   };
 
@@ -616,10 +634,6 @@ const Navbar = () => {
     }
   };
 
-  useEffect(() => {
-    GetState();
-  }, []);
-
   const ForgotPassApi = async (e) => {
     if (forgotemail === "") {
       alert("Enter the Email......!");
@@ -816,7 +830,10 @@ const Navbar = () => {
                           Current Balance
                         </div>
                         <div className="fw-bold" style={{ color: "#362a60" }}>
-                          &#8377; {currentaccountbalance}
+                          &#8377;{" "}
+                          {selectedTab === "flights"
+                            ? balance_data
+                            : currentaccountbalance}
                         </div>
                       </div>
 

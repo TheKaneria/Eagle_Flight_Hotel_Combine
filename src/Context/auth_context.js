@@ -41,6 +41,7 @@ import {
   login_airiq_live,
   logincurl,
   register,
+  travclanLogin,
   verify_otp,
 } from "../Utils/Constant";
 // import { useMallContext } from "./mall_context";
@@ -433,9 +434,6 @@ export const AuthProvider = ({ children }) => {
 
       if (verifyOtpData.success === 1) {
         dispatch({ type: LOGIN_SUCCESS, payload: verifyOtpData });
-
-        console.log("Confirm OTP data:", verifyOtpData);
-
         localStorage.setItem("is_login", JSON.stringify(true));
         localStorage.setItem("logindata", JSON.stringify(verifyOtpData));
         localStorage.setItem("is_token", JSON.stringify(verifyOtpData.token));
@@ -515,6 +513,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const NewLoginAPi = async () => {
+    try {
+      const response = await axios.post(travclanLogin, {
+        merchant_id: "mertd95em2p",
+        user_id: "068c410d7",
+        api_key: "63d41ff8-debe-4871-89be-5554bb11a6ee",
+      });
+      if (response.data) {
+        const { AccessToken, RefreshToken } = response.data;
+
+        // Save tokens in localStorage
+        localStorage.setItem("accessToken", AccessToken);
+        localStorage.setItem("refreshToken", RefreshToken);
+
+        console.log("Tokens stored successfully ✅");
+      }
+    } catch (error) {
+      console.log("Error in New Login API", error);
+      throw error; // Re-throw error to be caught by calling function
+    }
+  };
   return (
     <AuthContext.Provider
       value={{
@@ -529,6 +548,7 @@ export const AuthProvider = ({ children }) => {
         companyListBusApi,
         getCancellationPolicyApi,
         currentAccountBalanceApi,
+        NewLoginAPi,
       }}
     >
       {children}

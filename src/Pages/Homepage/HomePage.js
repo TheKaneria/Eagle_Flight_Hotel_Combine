@@ -175,7 +175,7 @@ const HomePage = () => {
     console.log("Booking ID cleared!");
   };
 
-  const { selectedTabMainHome } = useBusContext();
+  const { selectedTabMainHome, selectedTab, ClearRouteData } = useBusContext();
 
   // Company List API
 
@@ -200,7 +200,7 @@ const HomePage = () => {
       <HomeHero />
       {/* <HeroTicketBooking /> */}
 
-      {selectedTabMainHome === "buses" ? (
+      {selectedTab === "buses" ? (
         <>
           <HappySection />
           <WhyChooseUsBus />

@@ -7,6 +7,7 @@ import {
   CANCELLATION_POLICY_BEGIN,
   CANCELLATION_POLICY_ERROR,
   CANCELLATION_POLICY_SUCCESS,
+  CLEAR_ROUTE_DATA,
   CONFIRM_CANCELLATION_BEGIN,
   CONFIRM_CANCELLATION_ERROR,
   CONFIRM_CANCELLATION_SUCCESS,
@@ -115,7 +116,8 @@ const initialState = {
   route_middle_city_sequence_loading: false,
   from_city: "",
   to_city: "",
-  selectedTabMainHome: "buses",
+  selectedTabMainHome: "flights",
+  selectedTab: "flights",
 };
 
 const BusContext = createContext();
@@ -179,6 +181,8 @@ export const BusProvider = ({ children }) => {
           type: GET_ROUTES_SUCCESS,
           payload: res.data.data.AllRouteBusLists,
         });
+      } else {
+        dispatch({ type: GET_ROUTES_ERROR });
       }
     } catch (error) {
       dispatch({ type: GET_ROUTES_ERROR });
@@ -245,6 +249,7 @@ export const BusProvider = ({ children }) => {
           type: GET_CITY_PAIR_SUCCESS,
           payload: res.data.data.ITSCityPair,
         });
+        return res.data.data.ITSCityPair;
       }
     } catch (error) {
       dispatch({ type: GET_CITY_PAIR_ERROR });
@@ -568,6 +573,10 @@ export const BusProvider = ({ children }) => {
     dispatch({ type: SELECTED_TAB, payload: tab });
   };
 
+  const ClearRouteData = () => {
+    dispatch({ type: CLEAR_ROUTE_DATA });
+  };
+
   return (
     <BusContext.Provider
       value={{
@@ -591,6 +600,7 @@ export const BusProvider = ({ children }) => {
         partialCancellation,
         confirmPartialCancellation,
         GetRouteMiddleCitySequence,
+        ClearRouteData,
       }}
     >
       {children}

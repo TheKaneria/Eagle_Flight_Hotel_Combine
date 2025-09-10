@@ -1,7 +1,13 @@
 // const BaseUrl2 = "https://plance.in/eagleconnect/public/api/v1/";
 const BaseUrl2 = "https://erp.applified.co.in/eagleconnect/public/api/v1/";
+
+// const BaseUrl2 = "https://erp.applified.co.in/eagletest/public/api/v1/";
+
 const BaseUrl = "https://omairiq.azurewebsites.net/";
 const AirIQLiveBaseUrl = "http://testairiq.mywebcheck.in/TravelAPI.svc/";
+
+const newAirlineURL =
+  "https://flight-aggregator-api-sandbox.travclan.com/api/v2/flights/";
 
 const BusBaseUrl = "http://itsplatformv2.itspl.net/api/";
 export const verifyCall =
@@ -27,6 +33,7 @@ export const change_password = BaseUrl + "change-password";
 export const booking = BaseUrl + "booking";
 export const Booking = BaseUrl2 + "booking";
 export const get_booking = BaseUrl2 + "get-booking";
+export const get_flight_Booking = BaseUrl2 + "get-flights-booking";
 export const update_profile = BaseUrl + "update-profile";
 export const recent_search = BaseUrl2 + "recent-search";
 export const get_recent_search = BaseUrl2 + "get-recent-search";
@@ -42,6 +49,7 @@ export const supplierbookcurl = BaseUrl2 + "supplierbookcurl";
 export const supplierticketcurl = BaseUrl2 + "supplierticketcurl";
 export const dynamic_curl = BaseUrl2 + "dynamic_curl";
 export const get_bus_booking = BaseUrl2 + "get-bus-booking";
+export const newFlightApi_dynamic = BaseUrl2 + "dynamic_flights_curl";
 
 // Air IQ API
 export const sectors = BaseUrl + "sectors";
@@ -84,3 +92,20 @@ export const confirmpartialcancellation =
 
 export const getRouteMiddleCitySequence =
   BusBaseUrl + "GetRouteMiddleCitySequence";
+
+//new Flight Api TRAVCLAN
+
+export const travclanLogin =
+  "https://trav-auth-sandbox.travclan.com/authentication/internal/service/login";
+
+export const flightsearch = newAirlineURL + "search";
+export const getFare = newAirlineURL + "fare-rules";
+export const createItinerary = newAirlineURL + "itinerary";
+export const getItinerary = newAirlineURL + "itinerary";
+export const savePassenger = newAirlineURL + "itinerary";
+export const reprice = newAirlineURL + "itinerary";
+export const bookFlight = newAirlineURL + "itinerary";
+export const walletApi = newAirlineURL + "wallet";
+export const bookingget = newAirlineURL + "bookings";
+
+export const Payment_Api = BaseUrl2 + "payment-initiate";

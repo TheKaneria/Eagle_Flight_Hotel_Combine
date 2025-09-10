@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./SeatSelection.css";
 import { PiSteeringWheelFill } from "react-icons/pi";
 import { toast } from "react-toastify";
 import TextField from "@mui/material/TextField";
-import { FaMale, FaFemale, FaCircle, FaStopwatch } from "react-icons/fa";
+import { FaMale, FaFemale } from "react-icons/fa";
 import Divider from "@mui/material/Divider";
 import Accordion from "@mui/material/Accordion";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -16,8 +16,10 @@ import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
+  ACCEPT_HEADER,
   bookseat,
   getRouteMiddleCitySequence,
+  Payment_Api,
   seararrangementdetails,
   verifyCall,
 } from "../../Utils/Constant";
@@ -31,6 +33,8 @@ import TimelineDot from "@mui/lab/TimelineDot";
 import TimelineOppositeContent, {
   timelineOppositeContentClasses,
 } from "@mui/lab/TimelineOppositeContent";
+import moment from "moment";
+import axios from "axios";
 
 const seatTypes = [
   {
@@ -70,23 +74,30 @@ const seatTypes = [
   },
 ];
 
-const travelData = [
-  {
-    operator: "Shree Ramkrupa Travels",
-    busType: "Volvo 9600 A/C Seater (2+2)",
-    departureTime: "06:45",
-    departureDate: "02 Aug",
-    departurePoint: "Indira Circle",
-    departureAddress:
-      "Opp-Nakshtra Heights, Shree Ramkrupa Travels,150 feet ring road",
-    duration: "3h 15m",
-    arrivalTime: "10:00",
-    arrivalDate: "02 Aug",
-    arrivalPoint: "Shree Ramkrupa Travels, Narsang Tekri",
-    seatCount: 1,
-    seatNumbers: ["6"],
-  },
-];
+const RedirectToCCAvenue = ({ paymentData }) => {
+  const formRef = useRef(null);
+
+  useEffect(() => {
+    if (paymentData && formRef.current) {
+      formRef.current.submit();
+    }
+  }, [paymentData]);
+
+  if (!paymentData) return null;
+
+  return (
+    <form
+      ref={formRef}
+      method="post"
+      id={paymentData.order_id}
+      action={paymentData.payment_url}
+    >
+      {/* match exactly what CCAvenue expects */}
+      <input type="hidden" name="encRequest" value={paymentData.enc_request} />
+      <input type="hidden" name="access_code" value={paymentData.access_code} />
+    </form>
+  );
+};
 
 const SeatSelection = () => {
   const [selectedBoarding, setSelectedBoarding] = useState("");
@@ -100,7 +111,8 @@ const SeatSelection = () => {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [userr, setUser] = useState("");
   const [login, SetLogin] = useState("");
-  const [timeLeft, setTimeLeft] = useState(null); // in seconds
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [paymentData, setPaymentData] = useState(null);
 
   const navigate = useNavigate();
 
@@ -123,15 +135,11 @@ const SeatSelection = () => {
     location.state?.bus?.ReferenceNumber || ""
   );
 
-  // console.log("bus", getBus);
-  // console.log("ka bhai Response", route_middle_city_sequence);
-
   useEffect(() => {
     var islogin = localStorage.getItem("is_login");
     SetLogin(islogin);
     var user = localStorage.getItem("is_user");
     setUser(JSON.parse(user));
-
     GetmiddleCityroute();
   }, []);
 
@@ -200,6 +208,36 @@ const SeatSelection = () => {
     });
 
     return errors;
+  };
+
+  const OpenPaymentGetway = async (pnr, total) => {
+    const token = JSON.parse(localStorage.getItem("is_token"));
+    try {
+      const response = await axios.post(
+        Payment_Api,
+        {
+          booking_referance_no: pnr,
+          amount: total,
+          booking_for: 2,
+        },
+        {
+          headers: {
+            Accept: ACCEPT_HEADER,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setPaymentData(response.data);
+      } else {
+        throw new Error("Payment initiation failed");
+      }
+    } catch (err) {
+      console.error("❌ Payment error:", err);
+      alert(err.message || "Payment initiation failed. Try again.");
+    } finally {
+    }
   };
 
   const handleConfirm = async () => {
@@ -335,8 +373,14 @@ const SeatSelection = () => {
       formdata.append(`paxDetails[${index}][baseFare]`, pax.baseFare);
     });
 
-    // Optional timestamp (based on current date and time: 12:49 PM IST, July 30, 2025)
-    formdata.append("bookingTime", "2025-07-30 12:49 IST"); // Updated to current date and time
+    const bookingTime =
+      moment
+        .utc()
+        .add(5, "hours")
+        .add(30, "minutes")
+        .format("YYYY-MM-DD HH:mm") + " IST";
+
+    formdata.append("bookingTime", bookingTime);
     formdata.append(
       "arrival_date",
       getBus?.ApproxArrival
@@ -378,16 +422,18 @@ const SeatSelection = () => {
 
     setLoading(true);
     try {
-      console.log("Calling booking API...");
       const data = await GetBookSeatApi(formdata, token);
-      console.log("Booking response:", data);
       if (data) {
-        console.log("Booking successful:", data);
-        setIsExpanded(false);
-        navigate("/dashboard");
-        window.scrollTo(0, 0);
+        if (data?.Status) {
+          setIsExpanded(false);
+          OpenPaymentGetway(data.PNRNO, totalPrice);
+        } else {
+          toast.error(data.Message || "somthing went worng..!!");
+        }
+        // setIsExpanded(false);
+        // navigate("/dashboard");
+        // window.scrollTo(0, 0);
       } else {
-        console.log("No data received for booking");
         toast.error("No data received from booking API");
       }
     } catch (error) {
@@ -480,12 +526,8 @@ const SeatSelection = () => {
     }
   }, [seats_data]);
 
-  const rows = 4;
-  const columns = 6;
-
   const generateSeats = () => {
     if (!seats_data || !Array.isArray(seats_data)) return [];
-
     const seatsByRow = {};
     seats_data.forEach((seat) => {
       if (!seat.SeatNo.startsWith("T")) {
@@ -1130,12 +1172,14 @@ const SeatSelection = () => {
                 <div className="columnn">
                   <div className="steering-wheel sleeper_flex_front">
                     <div className="column-title">LOWER BERTH</div>
-                    <PiSteeringWheelFill size={35} />
+                    <PiSteeringWheelFill size={32} />
                   </div>
                   {renderSeatsSleeper(lowerSeats)}
                 </div>
                 <div className="columnn">
-                  <h4 className="column-title">UPPER BERTH</h4>
+                  <div className="sleeper_flex_front_UP">
+                    <div className="column-title">UPPER BERTH</div>
+                  </div>
                   {renderSeatsSleeper(upperSeats)}
                 </div>
               </div>
@@ -1794,6 +1838,8 @@ const SeatSelection = () => {
           </>
         )}
       </div>
+
+      {paymentData && <RedirectToCCAvenue paymentData={paymentData} />}
 
       <div className="seat-types-container">
         <h3 className="seat-title">Know your seat types</h3>
