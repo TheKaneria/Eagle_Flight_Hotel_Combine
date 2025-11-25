@@ -4,10 +4,12 @@ import axios from "axios";
 
 import {
   ACCEPT_HEADER,
+  ACCEPT_HEADER1,
   getFare,
   newFlightApi,
   newFlightApi_dynamic,
   reprice,
+  searchcurl,
   walletApi,
 } from "../Utils/Constant";
 import {
@@ -21,6 +23,9 @@ import {
   FARE_RULES_BEGIN,
   FARE_RULES_ERROR,
   FARE_RULES_SUCCESS,
+  FLIGHT_SEARCH_AIRIQ_BEGIN,
+  FLIGHT_SEARCH_AIRIQ_ERROR,
+  FLIGHT_SEARCH_AIRIQ_SUCCESS,
   FLIGHT_SEARCH_BEGIN,
   FLIGHT_SEARCH_ERROR,
   FLIGHT_SEARCH_SUCCESS,
@@ -44,8 +49,11 @@ import Notification from "../Utils/Notification";
 
 const initialState = {
   flight_Data: [],
+  flightAirIq_Data: [],
   return_flight_data: [],
   flight_Loading: false,
+  hasSearched: false,
+  flightAiriq_Loading: false,
   fare_rules: [],
   fare_rules_Loading: false,
   itinerary_data: {},
@@ -60,6 +68,7 @@ const initialState = {
   balance_loading: false,
   balance_data: "",
   get_booking_data: {},
+  return_get_booking_data: {},
   get_booking_loading: false,
 };
 
@@ -78,7 +87,6 @@ export const FlightProvider = ({ children }) => {
       if (resp.data?.error) {
         const apiMessage =
           resp.data.error.errorMessage || "Something went wrong";
-
         Notification("error", "Error", apiMessage);
         dispatch({ type: FLIGHT_SEARCH_ERROR });
         return;
@@ -100,6 +108,41 @@ export const FlightProvider = ({ children }) => {
     }
   };
 
+  const FlightSearchAiriq = async (params) => {
+    const token = JSON.parse(localStorage.getItem("is_token_airiq"));
+
+    // create headers using new Headers()
+    const headers = new Headers(ACCEPT_HEADER1);
+    headers.append("Authorization", `Bearer ${token}`);
+
+    dispatch({ type: FLIGHT_SEARCH_AIRIQ_BEGIN });
+
+    try {
+      const response = await fetch(searchcurl, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(params),
+      });
+
+      const resp = await response.json();
+
+      if (resp?.error) {
+        const apiMessage = resp.error.errorMessage || "Something went wrong";
+        Notification("error", "Error", apiMessage);
+        dispatch({ type: FLIGHT_SEARCH_AIRIQ_ERROR });
+        return;
+      }
+
+      const flightdata = resp?.data;
+      console.log("flightdata Airiq", flightdata);
+
+      dispatch({ type: FLIGHT_SEARCH_AIRIQ_SUCCESS, payload: flightdata });
+    } catch (error) {
+      console.log("Error in New Flight Search Api:", error);
+      dispatch({ type: FLIGHT_SEARCH_AIRIQ_ERROR });
+    }
+  };
+
   const GetFareRules = async (params) => {
     dispatch({ type: FARE_RULES_BEGIN });
 
@@ -111,6 +154,8 @@ export const FlightProvider = ({ children }) => {
       });
 
       const fareRuleData = resp.data.results;
+      console.log("fareRuleData", fareRuleData);
+
       dispatch({ type: FARE_RULES_SUCCESS, payload: fareRuleData });
     } catch (error) {
       dispatch({ type: FARE_RULES_ERROR });
@@ -129,13 +174,19 @@ export const FlightProvider = ({ children }) => {
         },
       });
 
+      if (resp.data?.error) {
+        const apiMessage =
+          resp.data.error.errorMessage || "Something went wrong";
+        Notification("error", "Error", apiMessage);
+        dispatch({ type: CREATE_ITINERARY_ERROR });
+        return;
+      }
+
       const itineraryData = resp.data.results;
 
-      console.log("api call", itineraryData);
-
       dispatch({ type: CREATE_ITINERARY_SUCCESS, payload: itineraryData });
-      localStorage.setItem("itineraryCode", itineraryData?.itineraryCode);
-      // return itineraryData;
+      localStorage.setItem("itineraryCode", itineraryData.itineraryCode);
+      return itineraryData;
     } catch (error) {
       dispatch({ type: CREATE_ITINERARY_ERROR });
       console.log("Error in New Flight Itinerary Api ", error);
@@ -198,7 +249,6 @@ export const FlightProvider = ({ children }) => {
 
   const Booking = async (params) => {
     dispatch({ type: BOOKING_BEGIN });
-
     try {
       const resp = await axios.post(newFlightApi_dynamic, params, {
         headers: {
@@ -266,6 +316,7 @@ export const FlightProvider = ({ children }) => {
       value={{
         ...state,
         FlightSearch,
+        FlightSearchAiriq,
         GetFareRules,
         CreateItinerary,
         GetSavedItinerary,
@@ -275,6 +326,7 @@ export const FlightProvider = ({ children }) => {
         ClearFlightData,
         GetBalance,
         GetBookingFlight,
+        FlightSearchAiriq,
       }}
     >
       {children}

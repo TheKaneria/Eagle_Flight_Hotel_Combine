@@ -17,10 +17,12 @@ import PassengerBooking from "./Pages/NewBookingPage/PassengerBooking";
 import PaymentStatus from "./Pages/Payment/PaymentStatus";
 import Payment from "./Pages/Payment/Payment";
 import PaymentStatus2 from "./Pages/Payment/designtest";
+import HomeHeroHotel from "./Components/HomeHeroHotel/HomeHeroHotel";
+import HotelBookingDetails from "./Pages/HotelBookingDetails/HotelBookingDetails";
 
 function App() {
   return (
-    <BrowserRouter basename="busticket" future={{ v7_startTransition: true }}>
+    <BrowserRouter basename="eagleticket" future={{ v7_startTransition: true }}>
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -35,7 +37,8 @@ function App() {
         <Route path="/contactus" element={<ContactUs />} />
         <Route path="/ViewBooking" element={<ViewBooking />} />
         <Route path="/ViewBookingBus" element={<ViewBookingBus />} />
-        <Route path="/newpassenger" element={<PassengerBooking />} />
+        <Route path="/zk" element={<HomeHeroHotel />} />
+        <Route path="/VD" element={<HotelBookingDetails />} />
         <Route path="/Payment" element={<Payment />} />
         <Route path="/payment-status" element={<PaymentStatus />} />
         <Route path="/payment-status2" element={<PaymentStatus2 />} />

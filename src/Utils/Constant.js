@@ -43,6 +43,7 @@ export const availabilitycurl = BaseUrl2 + "availabilitycurl";
 export const searchcurl = BaseUrl2 + "searchcurl";
 export const bookcurl = BaseUrl2 + "bookcurl";
 export const ticketcurl = BaseUrl2 + "ticketcurl";
+export const get_all_flights_booking = BaseUrl2 + "get-all-flights-booking";
 export const supplieravailabilitycurl = BaseUrl2 + "supplieravailabilitycurl";
 export const suppliersearchcurl = BaseUrl2 + "suppliersearchcurl";
 export const supplierbookcurl = BaseUrl2 + "supplierbookcurl";

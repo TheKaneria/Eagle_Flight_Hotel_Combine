@@ -4,23 +4,24 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import images from "../../Constants/images";
 import PathHero from "../../Components/PathHeroComponent/PathHero";
 import Select from "react-select";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import moment from "moment";
 import { Helmet } from "react-helmet";
 import { DatePicker } from "antd";
 import { IoAirplaneSharp } from "react-icons/io5";
 import {
+  ACCEPT_HEADER,
   bookFlight,
   bookingget,
   getItinerary,
   reprice,
   savePassenger,
+  bookcurl,
+  ticketcurl,
 } from "../../Utils/Constant";
-import "react-tabs/style/react-tabs.css";
 import { useFlightContext } from "../../Context/flight_context";
 import Modal from "react-modal";
-import "react-phone-input-2/lib/style.css";
-import { User, Phone, MapPin, CreditCard, Plane, Mail } from "lucide-react";
+import { Plane } from "lucide-react";
 import Notification from "../../Utils/Notification";
 import { useBusContext } from "../../Context/bus_context";
 import {
@@ -31,8 +32,10 @@ import {
   Button,
   IconButton,
   Typography,
+  Chip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import axios from "axios";
 
 const genderOptions = [
   { value: "male", label: "Male" },
@@ -124,7 +127,7 @@ const TicketBookingDetails = () => {
   
   .section-card {
     border-radius: 16px;
-    padding: 1.5rem;
+    // padding: 1.5rem;
     margin-bottom: 1.5rem;
     border: 1px solid;
   }
@@ -198,6 +201,7 @@ const TicketBookingDetails = () => {
     overflow-y: auto;
     padding: 1.5rem;
   }
+
   
   .scrollable-content::-webkit-scrollbar {
     width: 6px;
@@ -252,9 +256,14 @@ const TicketBookingDetails = () => {
     baggage: [],
     seat: [],
   });
+  const [ssrobjectkhali, setSsrObjectkhali] = useState({
+    meal: [],
+    baggage: [],
+    seat: [],
+  });
 
-  const [item, setItem] = useState(location.state?.item || null);
-  // console.log("Itemmm", item);
+  const [item, setItem] = useState(location.state?.item[0] || null);
+  console.log("Itemmm", item);
   const [flightdata, setFlightData] = useState(
     location.state?.returnitem || null
   );
@@ -273,6 +282,12 @@ const TicketBookingDetails = () => {
     location.state?.infanttraveler
   );
 
+  const [okres, setOKRes] = useState();
+  const [ticketId, setTicketId] = useState(item?.rI);
+  const [okres2, setOKRes2] = useState();
+  const [bookingID, setBookingID] = useState("");
+  const [getBookingData, setBookingData] = useState();
+
   const [userRole, setUserRole] = useState("");
   const { selectedTab } = useBusContext();
 
@@ -290,20 +305,22 @@ const TicketBookingDetails = () => {
     location.state?.timeing?.remainingTime || null
   );
 
+  const [timebaki, setTimeBaki] = useState(null);
+
   useEffect(() => {
-    if (!timeing || timeing <= 0) {
-      if (timeing === 0) {
-        setIsModalOpensession(true);
-      }
+    if (timebaki === null) return;
+
+    if (timebaki <= 0 && item?.fareIdentifier?.code !== "airIQ_fare") {
+      setIsModalOpensession(true);
       return;
     }
 
     const timerId = setInterval(() => {
-      setTimeing((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeBaki((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
 
     return () => clearInterval(timerId);
-  }, [timeing, navigate]);
+  }, [timebaki]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -355,8 +372,8 @@ const TicketBookingDetails = () => {
     passportNumber: "",
     passportExpiry: "",
     gender: "",
-    isLeadPax: true,
-    paxType: 1,
+    isLeadPax: false,
+    paxType: 2,
     addressLineOne: "",
     addressLineTwo: "",
     city: "",
@@ -384,8 +401,8 @@ const TicketBookingDetails = () => {
     passportNumber: "",
     passportExpiry: "",
     gender: "",
-    isLeadPax: true,
-    paxType: 1,
+    isLeadPax: false,
+    paxType: 3,
     addressLineOne: "",
     addressLineTwo: "",
     city: "",
@@ -416,7 +433,7 @@ const TicketBookingDetails = () => {
   );
 
   const [itinerarydatastate, setuseitinerarydatastate] = useState({});
-  const [datass, setdatass] = useState({});
+  const [datass, setdatass] = useState(ssrobjectkhali);
 
   const handleTravelerChange = (type, index, field, value) => {
     if (type === "adult") {
@@ -467,6 +484,7 @@ const TicketBookingDetails = () => {
     booking_loading,
     GetBookingFlight,
     get_booking_data,
+    return_get_booking_data,
     get_booking_loading,
   } = useFlightContext();
 
@@ -485,11 +503,20 @@ const TicketBookingDetails = () => {
 
     const res = await GetSavedItinerary(formdata);
     console.log("get itinerary no res", res);
+    const remaining = res?.traceIdDetails?.remainingTime ?? 0;
+    setTimeBaki(remaining);
 
     if (res) {
       if (!res?.error?.errorCode) {
         setuseitinerarydatastate(res);
-        setdatass(res?.itineraryItems[0]?.itemFlight?.ssr);
+
+        const ssrData = res?.itineraryItems?.[0]?.itemFlight?.ssr;
+
+        await setdatass(ssrData ?? ssrobjectkhali);
+
+        // await setdatass(
+        //   res?.itineraryItems[0]?.itemFlight?.ssr || ssrobjectkhali
+        // );
       } else {
         Notification("error", "Error", res.error.errorMessage);
       }
@@ -561,6 +588,32 @@ const TicketBookingDetails = () => {
     return { isValid: true };
   };
 
+  const validatePassengersAiriq = (passengers) => {
+    const requiredFields = ["title", "firstName", "lastName"];
+
+    const fieldLabels = {
+      title: "Title",
+      firstName: "First Name",
+      lastName: "Last Name",
+      dateOfBirth: "Date of Birth",
+    };
+
+    for (let i = 0; i < passengers.length; i++) {
+      const passenger = passengers[i];
+
+      for (const field of requiredFields) {
+        if (!passenger[field] || passenger[field].toString().trim() === "") {
+          return {
+            isValid: false,
+            message: `${fieldLabels[field]} is required for Passenger ${i + 1}`,
+          };
+        }
+      }
+    }
+
+    return { isValid: true };
+  };
+
   const handleSavePassenger = async () => {
     const token = localStorage.getItem("accessToken");
     const traceid = localStorage.getItem("traceID");
@@ -610,6 +663,128 @@ const TicketBookingDetails = () => {
       console.error("handleSavePassenger error:", err);
     }
   };
+
+  // Airiq Part API Start
+
+  const handleSavePassengerAiriq = async () => {
+    const token = JSON.parse(localStorage.getItem("is_token_airiq"));
+    const allPassengers = [...travelers, ...childtravelers, ...infanttravelers];
+    const validation = validatePassengersAiriq(allPassengers);
+    if (!validation.isValid) {
+      Notification("warning", "Field Required", validation.message);
+      return;
+    }
+
+    // Ensure only first passenger is Lead Pax
+    const passengersWithLeadFlag = allPassengers.map((pax, index) => ({
+      ...pax,
+      isLeadPax: index === 0,
+    }));
+    // Map passengers to the required API payload structure
+    const adult_info = passengersWithLeadFlag
+
+      .filter((pax) => pax.paxType == 1)
+      .map((pax) => ({
+        title: pax.title
+          ? pax.title.endsWith(".")
+            ? pax.title
+            : pax.title + "."
+          : "Mr.",
+        first_name: pax.firstName,
+        last_name: pax.lastName,
+      }));
+    console.log("adult_info", adult_info);
+
+    const child_info = passengersWithLeadFlag
+      .filter((pax) => pax.type == 2)
+      .map((pax) => ({
+        title: pax.title || "Mstr.",
+        first_name: pax.firstName,
+        last_name: pax.lastName,
+      }));
+
+    const infant_info = passengersWithLeadFlag
+      .filter((pax) => pax.type == 3)
+      .map((pax) => ({
+        title: pax.title || "Mstr.",
+        first_name: pax.firstName,
+        last_name: pax.lastName,
+        dob: pax.dob,
+        travel_with: pax.travelWith || 1,
+      }));
+
+    const payload = {
+      ticket_id: ticketId,
+      total_pax: passengersWithLeadFlag.length,
+      adult: adult_info.length,
+      child: child_info.length,
+      infant: infant_info.length,
+      adult_info,
+      child_info,
+      infant_info,
+    };
+
+    try {
+      const res = await axios.post(bookcurl, payload, {
+        headers: {
+          Accept: ACCEPT_HEADER,
+          Authorization: token,
+        },
+      });
+
+      if (res.data.status === "success") {
+        localStorage.setItem("booking_id", res.data.booking_id);
+        setBookingID(res.data.booking_id);
+        setBookingData(res.data);
+        Notification("success", "Success", res.data.message);
+
+        // Call the GET API with the booking_id
+        try {
+          const booking_id = res.data.booking_id;
+          const getRes = await axios.get(`${ticketcurl}/${booking_id}`, {
+            headers: {
+              Accept: ACCEPT_HEADER,
+              Authorization: token,
+            },
+          });
+          console.log("getRes", getRes);
+
+          if (getRes.data.status === "success") {
+            setBookingData(getRes?.data);
+            navigate("/");
+            // setBookingModal(true);
+          }
+
+          // Handle the GET response here if needed (e.g., set state or notify)
+          // For example: setTicketData(getRes.data);
+        } catch (getErr) {
+          Notification(
+            "error",
+            "Error",
+            getErr.response?.data?.error?.errorMessage ||
+              "Something went wrong while fetching ticket data"
+          );
+          console.error("GET API error:", getErr);
+        }
+      } else {
+        Notification(
+          "error",
+          "Error",
+          res.data?.error?.errorMessage || "Failed to save passenger details"
+        );
+      }
+    } catch (err) {
+      Notification(
+        "error",
+        "Error",
+        err.response?.data?.error?.errorMessage ||
+          "Something went wrong while saving passengers"
+      );
+      console.error("handleSavePassengerAiriq error:", err);
+    }
+  };
+
+  // Airiq Part API End
 
   const SavePassengerWithSSR = async () => {
     const token = localStorage.getItem("accessToken");
@@ -697,18 +872,37 @@ const TicketBookingDetails = () => {
     formdata.append("isPriceChangeAccepted", true);
 
     const res = await Booking(formdata);
-    console.log("Booking no Res", JSON.stringify(res, null, 2));
+    setOKRes2(res?.results?.details[0]);
+    setOKRes(res?.results?.details[1]);
 
     if (!res?.error?.errorCode) {
       setIsModalOpen(false);
       setBookingModal(true);
       GetBookingData(res.results.details[0]?.bmsBookingCode);
+      if (res?.results?.details[1]) {
+        GetReturnBookingData(res.results.details[1]?.bmsBookingCode);
+      }
     } else {
       Notification("error", "Error", res.error.errorMessage);
     }
   };
 
   const GetBookingData = async (code) => {
+    const token = localStorage.getItem("accessToken");
+    const formdata = new FormData();
+    formdata.append("type", "GET");
+    formdata.append("url", `${bookingget}/${code}`);
+    formdata.append("url_token", `Bearer ${token}`);
+    formdata.append("booking_code", code);
+
+    const res = await GetBookingFlight(formdata);
+
+    if (!res?.error?.errorCode) {
+    } else {
+      Notification("error", "Error", res.error.errorMessage);
+    }
+  };
+  const GetReturnBookingData = async (code) => {
     const token = localStorage.getItem("accessToken");
     const formdata = new FormData();
     formdata.append("type", "GET");
@@ -747,15 +941,6 @@ const TicketBookingDetails = () => {
       })
     );
   };
-
-  const flight =
-    get_booking_data?.flight_itinerary?.responseData?.results
-      ?.itineraryItems?.[0]?.itemFlight;
-
-  const passenger =
-    get_booking_data?.flight_itinerary?.responseData?.results?.passengers?.[0];
-
-  const segment = flight?.segments?.[0]?.[0];
 
   const statusConfig = {
     CONFIRMED: {
@@ -813,6 +998,23 @@ const TicketBookingDetails = () => {
     },
   };
 
+  const formatTimeok = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatDateok = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
   const bookingStatus = get_booking_data?.bookingStatus || "CONFIRMED";
   const status = statusConfig[bookingStatus] || statusConfig.CONFIRMED;
 
@@ -820,14 +1022,8 @@ const TicketBookingDetails = () => {
   const [selectedMeals, setSelectedMeals] = useState([]);
   const [selectedBaggage, setSelectedBaggage] = useState([]);
   const [seatmodalOpen, setSeatModalOpen] = useState(false);
-  const [showAccordion, setShowAccordion] = useState(false);
-  const [childAccordion, setChildAccrodion] = useState(false);
-  const [infantAccordion, setInfantAccrodion] = useState(false);
-  const [openIndex, setOpenIndex] = useState(null);
 
-  const toggleAccordion = (index) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
+  const [isReturn, setIsReturn] = useState(0);
 
   const handleSeatSelect = (seat) => {
     if (!seat.isBooked && seat.code) {
@@ -872,6 +1068,7 @@ const TicketBookingDetails = () => {
     setSeatModalOpen(false);
     setSelectedSeats([]);
   };
+
   const handleMealSelect = (meal) => {
     setSelectedMeals((prev) => {
       let updated;
@@ -1137,6 +1334,7 @@ const TicketBookingDetails = () => {
     setAddonCondition(true);
     closeModalasking();
   };
+
   return (
     <>
       <Helmet>
@@ -1158,55 +1356,66 @@ const TicketBookingDetails = () => {
               <h1>Customize Your Flight Experience</h1>
               <p>Select your seat, meal, and baggage options</p>
             </div>
+            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+              <>
+                <div className="navv-tabss">
+                  {/* Passenger tab - always enabled */}
+                  <button
+                    className={`nav-tab ${
+                      activeTab === "passengers" ? "active" : ""
+                    }`}
+                    onClick={() => setActiveTab("passengers")}
+                  >
+                    <span className="tab-icon">🧍‍♂️</span>
+                    <span className="tab-label">Passenger</span>
+                  </button>
 
-            <div className="navv-tabss">
-              {/* Passenger tab - always enabled */}
-              <button
-                className={`nav-tab ${
-                  activeTab === "passengers" ? "active" : ""
-                }`}
-                onClick={() => setActiveTab("passengers")}
-              >
-                <span className="tab-icon">🧍‍♂️</span>
-                <span className="tab-label">Passenger</span>
-              </button>
+                  {/* Seats tab */}
+                  <button
+                    className={`nav-tab ${
+                      activeTab === "seats" ? "active" : ""
+                    }`}
+                    onClick={() => addonCondition && setActiveTab("seats")}
+                    disabled={!addonCondition}
+                  >
+                    <span className="tab-icon">💺</span>
+                    <span className="tab-label">Seats</span>
+                  </button>
 
-              {/* Seats tab */}
-              <button
-                className={`nav-tab ${activeTab === "seats" ? "active" : ""}`}
-                onClick={() => addonCondition && setActiveTab("seats")}
-                disabled={!addonCondition}
-              >
-                <span className="tab-icon">💺</span>
-                <span className="tab-label">Seats</span>
-              </button>
+                  {/* Meals tab */}
+                  <button
+                    className={`nav-tab ${
+                      activeTab === "meals" ? "active" : ""
+                    }`}
+                    onClick={() => addonCondition && setActiveTab("meals")}
+                    disabled={!addonCondition}
+                  >
+                    <span className="tab-icon">🍽️</span>
+                    <span className="tab-label">Meals</span>
+                  </button>
 
-              {/* Meals tab */}
-              <button
-                className={`nav-tab ${activeTab === "meals" ? "active" : ""}`}
-                onClick={() => addonCondition && setActiveTab("meals")}
-                disabled={!addonCondition}
-              >
-                <span className="tab-icon">🍽️</span>
-                <span className="tab-label">Meals</span>
-              </button>
-
-              {/* Baggage tab */}
-              <button
-                className={`nav-tab ${activeTab === "baggage" ? "active" : ""}`}
-                onClick={() => addonCondition && setActiveTab("baggage")}
-                disabled={!addonCondition}
-              >
-                <span className="tab-icon">🧳</span>
-                <span className="tab-label">Baggage</span>
-              </button>
-            </div>
+                  {/* Baggage tab */}
+                  <button
+                    className={`nav-tab ${
+                      activeTab === "baggage" ? "active" : ""
+                    }`}
+                    onClick={() => addonCondition && setActiveTab("baggage")}
+                    disabled={!addonCondition}
+                  >
+                    <span className="tab-icon">🧳</span>
+                    <span className="tab-label">Baggage</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <></>
+            )}
 
             <div className="row justify-content-center mt-4">
-              <div className="col-12 col-lg-7 order-2 order-lg-1">
+              <div className="col-12 col-lg-7 order-1 order-lg-1">
                 <div className="row mt-3">
                   <div className="col-12">
-                    {timeing > 0 && (
+                    {timebaki !== null && timebaki > 0 && (
                       <div
                         style={{
                           position: "fixed",
@@ -1217,12 +1426,12 @@ const TicketBookingDetails = () => {
                       >
                         <div
                           className={`badge p-2 ${
-                            timeing <= 120
+                            timebaki <= 120
                               ? "bg-danger text-white"
                               : "bg-primary text-white"
                           }`}
                         >
-                          Time Remaining: {formatTime(timeing)}
+                          Time Remaining: {formatTime(timebaki)}
                         </div>
                       </div>
                     )}
@@ -1232,19 +1441,19 @@ const TicketBookingDetails = () => {
                 {activeTab === "passengers" && (
                   <>
                     <div className="w-100">
-                      <div className="card shadow-lg border-0 h-100 w-100">
+                      <div className="card shadow-lg border-0 h-100 w-100 card_flight">
                         {/* Header */}
                         <div
                           className="card-header border-0 p-4"
                           style={{
                             background:
-                              "linear-gradient(90deg, #2563eb 0%, #4338ca 100%)",
+                              "linear-gradient(135deg, #fc8236 0%, #fc5940 100%)",
                           }}
                         >
                           <div className="d-flex align-items-center">
                             <Plane className="text-white me-3" size={32} />
                             <div>
-                              <h1 className="h3 text-white mb-1 fw-bold">
+                              <h1 className="h3 text-white mb-1 fw-bold resp_head_text">
                                 Flight Passenger Details
                               </h1>
                               <p className="text-white-50 mb-0">
@@ -1269,15 +1478,15 @@ const TicketBookingDetails = () => {
                           {travelers?.map((traveler, index) => (
                             <div
                               key={index}
-                              className="card-body p-4 mb-4 border rounded"
+                              className="card-body p-3 p-md-4 mb-3 mb-md-4 border rounded"
                             >
-                              <h5 className="fw-semibold mb-3">
+                              <h5 className="fw-semibold mb-3 fs-6 fs-md-5">
                                 Adult Traveler {index + 1}
                               </h5>
 
                               {/* Title + Gender */}
                               <div className="row g-2 mb-3">
-                                <div className="col-6">
+                                <div className="col-12 col-sm-6">
                                   <label className="form-label small">
                                     Title
                                   </label>
@@ -1296,30 +1505,36 @@ const TicketBookingDetails = () => {
                                     }
                                   />
                                 </div>
-                                <div className="col-6">
-                                  <label className="form-label small">
-                                    Gender
-                                  </label>
-                                  <Select
-                                    options={genderOptions}
-                                    value={genderOptions.find(
-                                      (o) => o.value === traveler.gender
-                                    )}
-                                    onChange={(selected) =>
-                                      handleTravelerChange(
-                                        "adult",
-                                        index,
-                                        "gender",
-                                        selected.value
-                                      )
-                                    }
-                                  />
-                                </div>
+                                {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                  <>
+                                    <div className="col-12 col-sm-6">
+                                      <label className="form-label small">
+                                        Gender
+                                      </label>
+                                      <Select
+                                        options={genderOptions}
+                                        value={genderOptions.find(
+                                          (o) => o.value === traveler.gender
+                                        )}
+                                        onChange={(selected) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "gender",
+                                            selected.value
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <></>
+                                )}
                               </div>
 
                               {/* First + Last Name */}
                               <div className="row g-2 mb-3">
-                                <div className="col-6">
+                                <div className="col-12 col-sm-6">
                                   <label className="form-label small">
                                     First Name
                                   </label>
@@ -1337,7 +1552,7 @@ const TicketBookingDetails = () => {
                                     className="form-control"
                                   />
                                 </div>
-                                <div className="col-6">
+                                <div className="col-12 col-sm-6">
                                   <label className="form-label small">
                                     Last Name
                                   </label>
@@ -1358,299 +1573,352 @@ const TicketBookingDetails = () => {
                               </div>
 
                               {/* Date of Birth */}
-                              <div className="mb-3">
-                                <label className="form-label small">
-                                  Date of Birth
-                                </label>
-                                <DatePicker
-                                  selected={traveler.dateOfBirth}
-                                  onChange={(date, dateString) => {
-                                    handleTravelerChange(
-                                      "adult",
-                                      index,
-                                      "dateOfBirth",
-                                      dateString
-                                    );
-                                  }}
-                                  className="form-control"
-                                  dateFormat="yyyy-MM-dd"
-                                />
-                              </div>
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="mb-3">
+                                    <label className="form-label small">
+                                      Date of Birth
+                                    </label>
+                                    <DatePicker
+                                      selected={traveler.dateOfBirth}
+                                      onChange={(date, dateString) => {
+                                        handleTravelerChange(
+                                          "adult",
+                                          index,
+                                          "dateOfBirth",
+                                          dateString
+                                        );
+                                      }}
+                                      className="form-control w-100"
+                                      dateFormat="yyyy-MM-dd"
+                                    />
+                                  </div>
+                                </>
+                              ) : (
+                                <></>
+                              )}
 
                               {/* Email + Phone */}
-                              <div className="row g-2 mb-3">
-                                <div className="col-6">
-                                  <label className="form-label small">
-                                    Email
-                                  </label>
-                                  <input
-                                    type="email"
-                                    value={traveler.email}
-                                    onChange={(e) =>
-                                      handleTravelerChange(
-                                        "adult",
-                                        index,
-                                        "email",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="form-control"
-                                  />
-                                </div>
-                                <div className="col-6">
-                                  <label className="form-label small">
-                                    Phone
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={traveler.contactNumber}
-                                    onChange={(e) =>
-                                      handleTravelerChange(
-                                        "adult",
-                                        index,
-                                        "contactNumber",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="form-control"
-                                  />
-                                </div>
-                              </div>
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="row g-2 mb-3">
+                                    <div className="col-12 col-sm-6">
+                                      <label className="form-label small">
+                                        Email
+                                      </label>
+                                      <input
+                                        type="email"
+                                        value={traveler.email}
+                                        onChange={(e) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "email",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="form-control"
+                                      />
+                                    </div>
+                                    <div className="col-12 col-sm-6">
+                                      <label className="form-label small">
+                                        Phone
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={traveler.contactNumber}
+                                        onChange={(e) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "contactNumber",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="form-control"
+                                      />
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <></>
+                              )}
 
                               {/* Address */}
-                              <div className="mb-3">
-                                <label className="form-label small">
-                                  Address Line 1
-                                </label>
-                                <input
-                                  type="text"
-                                  value={traveler.addressLineOne}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "adult",
-                                      index,
-                                      "addressLineOne",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control mb-2"
-                                />
-
-                                <label className="form-label small">
-                                  Address Line 2
-                                </label>
-                                <input
-                                  type="text"
-                                  value={traveler.addressLineTwo}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "adult",
-                                      index,
-                                      "addressLineTwo",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control mb-2"
-                                />
-
-                                <div className="row g-2">
-                                  <div className="col-6">
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="mb-3">
+                                    <label className="form-label small">
+                                      Address Line 1
+                                    </label>
                                     <input
                                       type="text"
-                                      placeholder="City"
-                                      value={traveler.city}
+                                      value={traveler.addressLineOne}
                                       onChange={(e) =>
                                         handleTravelerChange(
                                           "adult",
                                           index,
-                                          "city",
+                                          "addressLineOne",
                                           e.target.value
                                         )
                                       }
-                                      className="form-control"
+                                      className="form-control mb-2"
                                     />
-                                  </div>
-                                  <div className="col-6">
+
+                                    <label className="form-label small">
+                                      Address Line 2
+                                    </label>
                                     <input
                                       type="text"
-                                      placeholder="Country"
-                                      value={traveler.countryName}
+                                      value={traveler.addressLineTwo}
                                       onChange={(e) =>
                                         handleTravelerChange(
                                           "adult",
                                           index,
-                                          "countryName",
+                                          "addressLineTwo",
                                           e.target.value
                                         )
                                       }
-                                      className="form-control"
+                                      className="form-control mb-2"
                                     />
+
+                                    <div className="row g-2">
+                                      <div className="col-12 col-sm-6">
+                                        <input
+                                          type="text"
+                                          placeholder="City"
+                                          value={traveler.city}
+                                          onChange={(e) =>
+                                            handleTravelerChange(
+                                              "adult",
+                                              index,
+                                              "city",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="form-control"
+                                        />
+                                      </div>
+                                      <div className="col-12 col-sm-6">
+                                        <input
+                                          type="text"
+                                          placeholder="Country"
+                                          value={traveler.countryName}
+                                          onChange={(e) =>
+                                            handleTravelerChange(
+                                              "adult",
+                                              index,
+                                              "countryName",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="form-control"
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                              </div>
+                                </>
+                              ) : (
+                                <></>
+                              )}
 
                               {/* Passport */}
-                              <div className="row g-2 mb-3">
-                                <div className="col-6">
-                                  <label className="form-label small">
-                                    Passport Number
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={traveler.passportNumber}
-                                    onChange={(e) =>
-                                      handleTravelerChange(
-                                        "adult",
-                                        index,
-                                        "passportNumber",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="form-control"
-                                  />
-                                </div>
-                                <div className="col-6">
-                                  <label className="form-label small">
-                                    Passport Expiry
-                                  </label>
-                                  <DatePicker
-                                    selected={traveler.passportExpiry}
-                                    onChange={(date, dateString) => {
-                                      handleTravelerChange(
-                                        "adult",
-                                        index,
-                                        "passportExpiry",
-                                        dateString
-                                      );
-                                    }}
-                                    className="form-control"
-                                    // dateFormat="yyyy-MM-dd"
-                                  />
-                                </div>
-                              </div>
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="row g-2 mb-3">
+                                    <div className="col-12 col-sm-6">
+                                      <label className="form-label small">
+                                        Passport Number
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={traveler.passportNumber}
+                                        onChange={(e) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "passportNumber",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="form-control"
+                                      />
+                                    </div>
+                                    <div className="col-12 col-sm-6">
+                                      <label className="form-label small">
+                                        Passport Expiry
+                                      </label>
+                                      <DatePicker
+                                        selected={traveler.passportExpiry}
+                                        onChange={(date, dateString) => {
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "passportExpiry",
+                                            dateString
+                                          );
+                                        }}
+                                        className="form-control w-100"
+                                      />
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <></>
+                              )}
 
                               {/* Frequent Flyer */}
-                              <div className="row g-2 mb-3">
-                                <div className="col-6">
-                                  <label className="form-label small">
-                                    Frequent Flyer No (optional)
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={traveler.frequentFlyerNumber}
-                                    onChange={(e) =>
-                                      handleTravelerChange(
-                                        "adult",
-                                        index,
-                                        "frequentFlyerNumber",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="form-control"
-                                  />
-                                </div>
-                                <div className="col-6">
-                                  <label className="form-label small">
-                                    Frequent Flayer Airline Code (optional)
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={traveler.frequentFlyerAirlineCode}
-                                    onChange={(e) =>
-                                      handleTravelerChange(
-                                        "adult",
-                                        index,
-                                        "frequentFlyerAirlineCode",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="form-control"
-                                  />
-                                </div>
-                              </div>
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="row g-2 mb-3">
+                                    <div className="col-12 col-sm-6">
+                                      <label className="form-label small">
+                                        Frequent Flyer No (optional)
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={traveler.frequentFlyerNumber}
+                                        onChange={(e) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "frequentFlyerNumber",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="form-control"
+                                      />
+                                    </div>
+                                    <div className="col-12 col-sm-6">
+                                      <label className="form-label small">
+                                        Frequent Flayer Airline Code (optional)
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={
+                                          traveler.frequentFlyerAirlineCode
+                                        }
+                                        onChange={(e) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "frequentFlyerAirlineCode",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="form-control"
+                                      />
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <></>
+                              )}
 
-                              {/* GST */}
-                              <div className="mb-3">
-                                <h6 className="fw-bold">
-                                  GST Information (Optional)
-                                </h6>
-                                <input
-                                  type="text"
-                                  placeholder="GST Number"
-                                  value={traveler.gstNumber}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "adult",
-                                      index,
-                                      "gstNumber",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control mb-2"
-                                />
-                                <input
-                                  type="text"
-                                  placeholder="GST Company Name"
-                                  value={traveler.gstCompanyName}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "adult",
-                                      index,
-                                      "gstCompanyName",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control mb-2"
-                                />
-                                <input
-                                  type="text"
-                                  placeholder="GST Company Address"
-                                  value={traveler.gstCompanyAddress}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "adult",
-                                      index,
-                                      "gstCompanyAddress",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control mb-2"
-                                />
-                                <div className="row g-2">
-                                  <div className="col-6">
-                                    <input
-                                      type="email"
-                                      placeholder="GST Company Email"
-                                      value={traveler.gstCompanyEmail}
-                                      onChange={(e) =>
-                                        handleTravelerChange(
-                                          "adult",
-                                          index,
-                                          "gstCompanyEmail",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="form-control"
-                                    />
+                              {/* GST Information - Collapsible on Mobile */}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="mb-3">
+                                    <h6 className="fw-bold fs-6">
+                                      GST Information (Optional)
+                                    </h6>
+
+                                    {/* GST Number - Full width on mobile */}
+                                    <div className="mb-2">
+                                      <input
+                                        type="text"
+                                        placeholder="GST Number"
+                                        value={traveler.gstNumber}
+                                        onChange={(e) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "gstNumber",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="form-control"
+                                      />
+                                    </div>
+
+                                    {/* Company Name - Full width on mobile */}
+                                    <div className="mb-2">
+                                      <input
+                                        type="text"
+                                        placeholder="GST Company Name"
+                                        value={traveler.gstCompanyName}
+                                        onChange={(e) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "gstCompanyName",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="form-control"
+                                      />
+                                    </div>
+
+                                    {/* Company Address - Full width on mobile */}
+                                    <div className="mb-2">
+                                      <input
+                                        type="text"
+                                        placeholder="GST Company Address"
+                                        value={traveler.gstCompanyAddress}
+                                        onChange={(e) =>
+                                          handleTravelerChange(
+                                            "adult",
+                                            index,
+                                            "gstCompanyAddress",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="form-control"
+                                      />
+                                    </div>
+
+                                    {/* Email and Phone in row for tablet+, stacked for mobile */}
+                                    <div className="row g-2">
+                                      <div className="col-12 col-sm-6">
+                                        <input
+                                          type="email"
+                                          placeholder="GST Company Email"
+                                          value={traveler.gstCompanyEmail}
+                                          onChange={(e) =>
+                                            handleTravelerChange(
+                                              "adult",
+                                              index,
+                                              "gstCompanyEmail",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="form-control"
+                                        />
+                                      </div>
+                                      <div className="col-12 col-sm-6">
+                                        <input
+                                          type="text"
+                                          placeholder="GST Company Phone"
+                                          value={
+                                            traveler.gstCompanyContactNumber
+                                          }
+                                          onChange={(e) =>
+                                            handleTravelerChange(
+                                              "adult",
+                                              index,
+                                              "gstCompanyContactNumber",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="form-control"
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="col-6">
-                                    <input
-                                      type="text"
-                                      placeholder="GST Company Phone"
-                                      value={traveler.gstCompanyContactNumber}
-                                      onChange={(e) =>
-                                        handleTravelerChange(
-                                          "adult",
-                                          index,
-                                          "gstCompanyContactNumber",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="form-control"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
+                                </>
+                              ) : (
+                                <></>
+                              )}
                             </div>
                           ))}
                         </>
@@ -1687,25 +1955,31 @@ const TicketBookingDetails = () => {
                                   }
                                 />
                               </div>
-                              <div className="col-6">
-                                <label className="form-label small">
-                                  Gender
-                                </label>
-                                <Select
-                                  options={genderOptions}
-                                  value={genderOptions.find(
-                                    (o) => o.value === child.gender
-                                  )}
-                                  onChange={(selected) =>
-                                    handleTravelerChange(
-                                      "child",
-                                      index,
-                                      "gender",
-                                      selected.value
-                                    )
-                                  }
-                                />
-                              </div>
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="col-6">
+                                    <label className="form-label small">
+                                      Gender
+                                    </label>
+                                    <Select
+                                      options={genderOptions}
+                                      value={genderOptions.find(
+                                        (o) => o.value === child.gender
+                                      )}
+                                      onChange={(selected) =>
+                                        handleTravelerChange(
+                                          "child",
+                                          index,
+                                          "gender",
+                                          selected.value
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                </>
+                              ) : (
+                                <></>
+                              )}
                             </div>
 
                             {/* Names */}
@@ -1764,145 +2038,175 @@ const TicketBookingDetails = () => {
                               />
                             </div>
                             {/* Contact */}
-                            <div className="row g-2 mb-3">
-                              <div className="col-6">
-                                <label>Email</label>
-                                <input
-                                  type="email"
-                                  value={child.email}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "child",
-                                      index,
-                                      "email",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                              <div className="col-6">
-                                <label>Phone</label>
-                                <input
-                                  type="text"
-                                  value={child.contactNumber}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "child",
-                                      index,
-                                      "contactNumber",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                            </div>
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="row g-2 mb-3">
+                                  <div className="col-6">
+                                    <label>Email</label>
+                                    <input
+                                      type="email"
+                                      value={child.email}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "child",
+                                          index,
+                                          "email",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                  <div className="col-6">
+                                    <label>Phone</label>
+                                    <input
+                                      type="text"
+                                      value={child.contactNumber}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "child",
+                                          index,
+                                          "contactNumber",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
 
                             {/* Address */}
-                            <div className="mb-3">
-                              <label>Address Line 1</label>
-                              <input
-                                type="text"
-                                value={child.addressLineOne}
-                                onChange={(e) =>
-                                  handleTravelerChange(
-                                    "child",
-                                    index,
-                                    "addressLineOne",
-                                    e.target.value
-                                  )
-                                }
-                                className="form-control"
-                              />
-                            </div>
-                            <div className="mb-3">
-                              <label>Address Line 2</label>
-                              <input
-                                type="text"
-                                value={child.addressLineTwo}
-                                onChange={(e) =>
-                                  handleTravelerChange(
-                                    "child",
-                                    index,
-                                    "addressLineTwo",
-                                    e.target.value
-                                  )
-                                }
-                                className="form-control"
-                              />
-                            </div>
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="mb-3">
+                                  <label>Address Line 1</label>
+                                  <input
+                                    type="text"
+                                    value={child.addressLineOne}
+                                    onChange={(e) =>
+                                      handleTravelerChange(
+                                        "child",
+                                        index,
+                                        "addressLineOne",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="form-control"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="mb-3">
+                                  <label>Address Line 2</label>
+                                  <input
+                                    type="text"
+                                    value={child.addressLineTwo}
+                                    onChange={(e) =>
+                                      handleTravelerChange(
+                                        "child",
+                                        index,
+                                        "addressLineTwo",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="form-control"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
 
-                            <div className="row g-2 mb-3">
-                              <div className="col-6">
-                                <label>City</label>
-                                <input
-                                  type="text"
-                                  value={child.city}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "child",
-                                      index,
-                                      "city",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                              <div className="col-6">
-                                <label>Country</label>
-                                <input
-                                  type="text"
-                                  value={child.countryName}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "child",
-                                      index,
-                                      "countryName",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                            </div>
-
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="row g-2 mb-3">
+                                  <div className="col-6">
+                                    <label>City</label>
+                                    <input
+                                      type="text"
+                                      value={child.city}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "child",
+                                          index,
+                                          "city",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                  <div className="col-6">
+                                    <label>Country</label>
+                                    <input
+                                      type="text"
+                                      value={child.countryName}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "child",
+                                          index,
+                                          "countryName",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
+                            {}
                             {/* Passport */}
-                            <div className="row g-2 mb-3">
-                              <div className="col-6">
-                                <label>Passport Number</label>
-                                <input
-                                  type="text"
-                                  value={child.passportNumber}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "child",
-                                      index,
-                                      "passportNumber",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                              <div className="col-6">
-                                <label>Passport Expiry</label>
-                                <DatePicker
-                                  selected={child.passportExpiry}
-                                  onChange={(date, dateString) => {
-                                    handleTravelerChange(
-                                      "child",
-                                      index,
-                                      "passportExpiry",
-                                      dateString
-                                    );
-                                  }}
-                                  className="form-control"
-                                  dateFormat="yyyy-MM-dd"
-                                />
-                              </div>
-                            </div>
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="row g-2 mb-3">
+                                  <div className="col-6">
+                                    <label>Passport Number</label>
+                                    <input
+                                      type="text"
+                                      value={child.passportNumber}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "child",
+                                          index,
+                                          "passportNumber",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                  <div className="col-6">
+                                    <label>Passport Expiry</label>
+                                    <DatePicker
+                                      selected={child.passportExpiry}
+                                      onChange={(date, dateString) => {
+                                        handleTravelerChange(
+                                          "child",
+                                          index,
+                                          "passportExpiry",
+                                          dateString
+                                        );
+                                      }}
+                                      className="form-control"
+                                      dateFormat="yyyy-MM-dd"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
                           </div>
                         ))}
 
@@ -1939,25 +2243,31 @@ const TicketBookingDetails = () => {
                                   }
                                 />
                               </div>
-                              <div className="col-6">
-                                <label className="form-label small">
-                                  Gender
-                                </label>
-                                <Select
-                                  options={genderOptions}
-                                  value={genderOptions.find(
-                                    (o) => o.value === infant.gender
-                                  )}
-                                  onChange={(selected) =>
-                                    handleTravelerChange(
-                                      "infant",
-                                      index,
-                                      "gender",
-                                      selected.value
-                                    )
-                                  }
-                                />
-                              </div>
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="col-6">
+                                    <label className="form-label small">
+                                      Gender
+                                    </label>
+                                    <Select
+                                      options={genderOptions}
+                                      value={genderOptions.find(
+                                        (o) => o.value === infant.gender
+                                      )}
+                                      onChange={(selected) =>
+                                        handleTravelerChange(
+                                          "infant",
+                                          index,
+                                          "gender",
+                                          selected.value
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                </>
+                              ) : (
+                                <></>
+                              )}
                             </div>
 
                             {/* Names */}
@@ -1997,163 +2307,199 @@ const TicketBookingDetails = () => {
                             </div>
 
                             {/* DOB */}
-                            <div className="mb-3">
-                              <label>Date of Birth</label>
-                              <DatePicker
-                                selected={infant.dateOfBirth}
-                                onChange={(date, dateString) => {
-                                  handleTravelerChange(
-                                    "infant",
-                                    index,
-                                    "dateOfBirth",
-                                    dateString
-                                  );
-                                }}
-                                className="form-control"
-                                dateFormat="yyyy-MM-dd"
-                              />
-                            </div>
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="mb-3">
+                                  <label>Date of Birth</label>
+                                  <DatePicker
+                                    selected={infant.dateOfBirth}
+                                    onChange={(date, dateString) => {
+                                      handleTravelerChange(
+                                        "infant",
+                                        index,
+                                        "dateOfBirth",
+                                        dateString
+                                      );
+                                    }}
+                                    className="form-control"
+                                    dateFormat="yyyy-MM-dd"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
 
                             {/* Contact */}
-                            <div className="row g-2 mb-3">
-                              <div className="col-6">
-                                <label>Email</label>
-                                <input
-                                  type="email"
-                                  value={infant.email}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "infant",
-                                      index,
-                                      "email",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                              <div className="col-6">
-                                <label>Phone</label>
-                                <input
-                                  type="text"
-                                  value={infant.contactNumber}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "infant",
-                                      index,
-                                      "contactNumber",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                            </div>
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="row g-2 mb-3">
+                                  <div className="col-6">
+                                    <label>Email</label>
+                                    <input
+                                      type="email"
+                                      value={infant.email}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "infant",
+                                          index,
+                                          "email",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                  <div className="col-6">
+                                    <label>Phone</label>
+                                    <input
+                                      type="text"
+                                      value={infant.contactNumber}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "infant",
+                                          index,
+                                          "contactNumber",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
 
                             {/* Address */}
-                            <div className="mb-3">
-                              <label>Address Line 1</label>
-                              <input
-                                type="text"
-                                value={infant.addressLineOne}
-                                onChange={(e) =>
-                                  handleTravelerChange(
-                                    "infant",
-                                    index,
-                                    "addressLineOne",
-                                    e.target.value
-                                  )
-                                }
-                                className="form-control"
-                              />
-                            </div>
-                            <div className="mb-3">
-                              <label>Address Line 2</label>
-                              <input
-                                type="text"
-                                value={infant.addressLineTwo}
-                                onChange={(e) =>
-                                  handleTravelerChange(
-                                    "infant",
-                                    index,
-                                    "addressLineTwo",
-                                    e.target.value
-                                  )
-                                }
-                                className="form-control"
-                              />
-                            </div>
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="mb-3">
+                                  <label>Address Line 1</label>
+                                  <input
+                                    type="text"
+                                    value={infant.addressLineOne}
+                                    onChange={(e) =>
+                                      handleTravelerChange(
+                                        "infant",
+                                        index,
+                                        "addressLineOne",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="form-control"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="mb-3">
+                                  <label>Address Line 2</label>
+                                  <input
+                                    type="text"
+                                    value={infant.addressLineTwo}
+                                    onChange={(e) =>
+                                      handleTravelerChange(
+                                        "infant",
+                                        index,
+                                        "addressLineTwo",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="form-control"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
 
-                            <div className="row g-2 mb-3">
-                              <div className="col-6">
-                                <label>City</label>
-                                <input
-                                  type="text"
-                                  value={infant.city}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "infant",
-                                      index,
-                                      "city",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                              <div className="col-6">
-                                <label>Country</label>
-                                <input
-                                  type="text"
-                                  value={infant.countryName}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "infant",
-                                      index,
-                                      "countryName",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                            </div>
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="row g-2 mb-3">
+                                  <div className="col-6">
+                                    <label>City</label>
+                                    <input
+                                      type="text"
+                                      value={infant.city}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "infant",
+                                          index,
+                                          "city",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                  <div className="col-6">
+                                    <label>Country</label>
+                                    <input
+                                      type="text"
+                                      value={infant.countryName}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "infant",
+                                          index,
+                                          "countryName",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
 
                             {/* Passport */}
-                            <div className="row g-2 mb-3">
-                              <div className="col-6">
-                                <label>Passport Number</label>
-                                <input
-                                  type="text"
-                                  value={infant.passportNumber}
-                                  onChange={(e) =>
-                                    handleTravelerChange(
-                                      "infant",
-                                      index,
-                                      "passportNumber",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                />
-                              </div>
-                              <div className="col-6">
-                                <label>Passport Expiry</label>
-                                <DatePicker
-                                  selected={infant.passportExpiry}
-                                  onChange={(date, dateString) => {
-                                    handleTravelerChange(
-                                      "infant",
-                                      index,
-                                      "passportExpiry",
-                                      dateString
-                                    );
-                                  }}
-                                  className="form-control"
-                                  dateFormat="yyyy-MM-dd"
-                                />
-                              </div>
-                            </div>
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                <div className="row g-2 mb-3">
+                                  <div className="col-6">
+                                    <label>Passport Number</label>
+                                    <input
+                                      type="text"
+                                      value={infant.passportNumber}
+                                      onChange={(e) =>
+                                        handleTravelerChange(
+                                          "infant",
+                                          index,
+                                          "passportNumber",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="form-control"
+                                    />
+                                  </div>
+                                  <div className="col-6">
+                                    <label>Passport Expiry</label>
+                                    <DatePicker
+                                      selected={infant.passportExpiry}
+                                      onChange={(date, dateString) => {
+                                        handleTravelerChange(
+                                          "infant",
+                                          index,
+                                          "passportExpiry",
+                                          dateString
+                                        );
+                                      }}
+                                      className="form-control"
+                                      dateFormat="yyyy-MM-dd"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <></>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -2181,7 +2527,7 @@ const TicketBookingDetails = () => {
                         style={{
                           cursor: check ? "pointer" : "not-allowed",
                         }}
-                        className="col-2 btnn text-center sbmitbtn"
+                        className="col-2 mx-auto btnn text-center sbmitbtn"
                         onClick={() => {
                           const allPassengers = [
                             ...travelers,
@@ -2189,8 +2535,10 @@ const TicketBookingDetails = () => {
                             ...infanttravelers,
                           ];
 
-                          const validation = validatePassengers(allPassengers);
-
+                          const validation =
+                            item?.fareIdentifier?.code !== "airIQ_fare"
+                              ? validatePassengers(allPassengers)
+                              : validatePassengersAiriq(allPassengers);
                           if (!validation.isValid) {
                             Notification(
                               "warning",
@@ -2200,9 +2548,17 @@ const TicketBookingDetails = () => {
                             return;
                           }
 
-                          if (check) {
+                          if (
+                            check &&
+                            item?.fareIdentifier?.code !== "airIQ_fare"
+                          ) {
                             openModalasking();
+                            console.log("true airiq");
                             // handleSavePassenger();
+                          } else {
+                            console.log("false airiq");
+
+                            handleSavePassengerAiriq();
                           }
                         }}
                       >
@@ -2216,7 +2572,7 @@ const TicketBookingDetails = () => {
                 {activeTab === "baggage" && <BaggageSelection />}
               </div>
 
-              <div className="col-12 col-lg-5 order-1 order-lg-2">
+              <div className="col-12 col-lg-5 order-2 order-lg-2">
                 <div className="row">
                   <div className="col-12 pricee-tag">
                     <h2 className="fs-4 fs-lg-2">Your Booking Details</h2>
@@ -2227,56 +2583,91 @@ const TicketBookingDetails = () => {
                   style={{ border: "1px solid #ff4500" }}
                 >
                   <div className="booking_details_airline_name_heading">
-                    <div>
-                      {(() => {
-                        const airline = item.sg[0]?.al?.alN;
-                        return airline === "Indigo" || airline === "Indigo" ? (
-                          <img
-                            src={images.IndiGoAirlines_logo}
-                            className="airline_logo"
-                          />
-                        ) : airline === "Neos" ? (
-                          <img src={images.neoslogo} className="airline_logo" />
-                        ) : airline === "SpiceJet" ? (
-                          <img src={images.spicejet} className="airline_logo" />
-                        ) : airline === "Air India" ? (
-                          <img
-                            src={images.airindialogo}
-                            className="airline_logo"
-                          />
-                        ) : airline === "Akasa Air" ? (
-                          <img
-                            src={images.akasalogo}
-                            className="airline_logo"
-                          />
-                        ) : airline === "Etihad" ? (
-                          <img
-                            src={images.etihadlogo}
-                            style={{
-                              backgroundColor: "#fffbdb",
-                              padding: "5px",
-                              borderRadius: "5px",
+                    <div className="d-flex gap-2 align-items-center">
+                      <div>
+                        {(() => {
+                          const airline = item.sg[0]?.al?.alN;
+                          return airline === "Indigo" ||
+                            airline === "Indigo" ? (
+                            <img
+                              src={images.IndiGoAirlines_logo}
+                              className="airline_logo"
+                            />
+                          ) : airline === "Spicejet" ? (
+                            <img
+                              src={images.spicejet}
+                              className="airline_logo"
+                            />
+                          ) : airline === "Neos" ? (
+                            <img
+                              src={images.neoslogo}
+                              className="airline_logo"
+                            />
+                          ) : airline === "Air India" ? (
+                            <img
+                              src={images.airindialogo}
+                              className="airline_logo"
+                            />
+                          ) : airline === "Akasa Air" ? (
+                            <img
+                              src={images.akasalogo}
+                              className="airline_logo"
+                            />
+                          ) : airline === "Etihad" ? (
+                            <img
+                              src={images.etihadlogo}
+                              style={{
+                                backgroundColor: "#fffbdb",
+                                padding: "5px",
+                                borderRadius: "5px",
+                              }}
+                              className="airline_logo"
+                            />
+                          ) : airline === "Vistara" ? (
+                            <img
+                              src={images.vistaralogo}
+                              className="airline_logo"
+                            />
+                          ) : airline === "AirAsia X" ? (
+                            <img
+                              src={images.airasiax}
+                              className="airline_logo"
+                            />
+                          ) : (
+                            <IoAirplaneSharp size={40} color="white" />
+                          );
+                        })()}
+                      </div>
+                      <div
+                        className="text-dark"
+                        style={{ fontWeight: "600", fontSize: "18px" }}
+                      >
+                        {item.sg[0]?.al?.alN}
+                      </div>
+                    </div>
+                    {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                      <>
+                        <div>
+                          <Chip
+                            label={
+                              item?.iR === true
+                                ? "Refundable"
+                                : "Non-Refundable"
+                            }
+                            variant="outlined"
+                            sx={{
+                              color: item?.iR === true ? "green" : "gray",
+                              backgroundColor:
+                                item?.iR === true ? "#e0f7e9" : "inherit",
+                              borderColor:
+                                item?.iR === true ? "#4caf50" : "inherit",
                             }}
-                            className="airline_logo"
                           />
-                        ) : airline === "Vistara" ? (
-                          <img
-                            src={images.vistaralogo}
-                            className="airline_logo"
-                          />
-                        ) : airline === "AirAsia X" ? (
-                          <img src={images.airasiax} className="airline_logo" />
-                        ) : (
-                          <IoAirplaneSharp size={40} color="white" />
-                        );
-                      })()}
-                    </div>
-                    <div
-                      className="text-dark"
-                      style={{ fontWeight: "600", fontSize: "18px" }}
-                    >
-                      {item.sg[0]?.al?.alN}
-                    </div>
+                        </div>
+                      </>
+                    ) : (
+                      <></>
+                    )}
                   </div>
                   <div className="col-12 py-3 flight-box">
                     <div className="flight-departure text-center">
@@ -2343,65 +2734,84 @@ const TicketBookingDetails = () => {
                   {flightdata ? (
                     <>
                       <div className="booking_details_airline_name_heading">
-                        <div>
-                          {(() => {
-                            const airline = flightdata.sg[0]?.al?.alN;
-                            return airline === "Indigo" ||
-                              airline === "Indigo" ? (
-                              <img
-                                src={images.IndiGoAirlines_logo}
-                                className="airline_logo"
-                              />
-                            ) : airline === "Neos" ? (
-                              <img
-                                src={images.neoslogo}
-                                className="airline_logo"
-                              />
-                            ) : airline === "SpiceJet" ? (
-                              <img
-                                src={images.spicejet}
-                                className="airline_logo"
-                              />
-                            ) : airline === "Air India" ? (
-                              <img
-                                src={images.airindialogo}
-                                className="airline_logo"
-                              />
-                            ) : airline === "Akasa Air" ? (
-                              <img
-                                src={images.akasalogo}
-                                className="airline_logo"
-                              />
-                            ) : airline === "Etihad" ? (
-                              <img
-                                src={images.etihadlogo}
-                                style={{
-                                  backgroundColor: "#fffbdb",
-                                  padding: "5px",
-                                  borderRadius: "5px",
-                                }}
-                                className="airline_logo"
-                              />
-                            ) : airline === "Vistara" ? (
-                              <img
-                                src={images.vistaralogo}
-                                className="airline_logo"
-                              />
-                            ) : airline === "AirAsia X" ? (
-                              <img
-                                src={images.airasiax}
-                                className="airline_logo"
-                              />
-                            ) : (
-                              <IoAirplaneSharp size={40} color="white" />
-                            );
-                          })()}
+                        <div className="d-flex gap-2 align-items-center">
+                          <div>
+                            {(() => {
+                              const airline = flightdata.sg[0]?.al?.alN;
+                              return airline === "Indigo" ||
+                                airline === "Indigo" ? (
+                                <img
+                                  src={images.IndiGoAirlines_logo}
+                                  className="airline_logo"
+                                />
+                              ) : airline === "Neos" ? (
+                                <img
+                                  src={images.neoslogo}
+                                  className="airline_logo"
+                                />
+                              ) : airline === "SpiceJet" ? (
+                                <img
+                                  src={images.spicejet}
+                                  className="airline_logo"
+                                />
+                              ) : airline === "Air India" ? (
+                                <img
+                                  src={images.airindialogo}
+                                  className="airline_logo"
+                                />
+                              ) : airline === "Akasa Air" ? (
+                                <img
+                                  src={images.akasalogo}
+                                  className="airline_logo"
+                                />
+                              ) : airline === "Etihad" ? (
+                                <img
+                                  src={images.etihadlogo}
+                                  style={{
+                                    backgroundColor: "#fffbdb",
+                                    padding: "5px",
+                                    borderRadius: "5px",
+                                  }}
+                                  className="airline_logo"
+                                />
+                              ) : airline === "Vistara" ? (
+                                <img
+                                  src={images.vistaralogo}
+                                  className="airline_logo"
+                                />
+                              ) : airline === "AirAsia X" ? (
+                                <img
+                                  src={images.airasiax}
+                                  className="airline_logo"
+                                />
+                              ) : (
+                                <IoAirplaneSharp size={40} color="white" />
+                              );
+                            })()}
+                          </div>
+                          <div
+                            className="text-dark"
+                            style={{ fontWeight: "600", fontSize: "18px" }}
+                          >
+                            {flightdata.sg[0]?.al?.alN}
+                          </div>
                         </div>
-                        <div
-                          className="text-dark"
-                          style={{ fontWeight: "600", fontSize: "18px" }}
-                        >
-                          {flightdata.sg[0]?.al?.alN}
+                        <div>
+                          <Chip
+                            label={
+                              item?.iR === true
+                                ? "Refundable"
+                                : "Non-Refundable"
+                            }
+                            variant="outlined"
+                            sx={{
+                              color: item?.iR === true ? "green" : "gray",
+                              backgroundColor:
+                                item?.iR === true ? "#e0f7e9" : "inherit",
+                              borderColor:
+                                item?.iR === true ? "#4caf50" : "inherit",
+                            }}
+                          />
                         </div>
                       </div>
                       <div className="col-12 py-3 flight-box">
@@ -2481,8 +2891,15 @@ const TicketBookingDetails = () => {
                   </div>
                   <div className="border p-3 rounded shadow-sm">
                     {(() => {
-                      let totalFare = item?.fF || 0;
-                      let totalService = item?.sF || 0;
+                      let totalFare =
+                        item?.fareIdentifier?.code !== "airIQ_fare"
+                          ? item?.fF || 0
+                          : item?.airIQPrice || 0;
+
+                      let totalService =
+                        item?.fareIdentifier?.code !== "airIQ_fare"
+                          ? item?.sF || 0
+                          : 0.0;
 
                       if (flightdata) {
                         totalFare += flightdata?.fF || 0;
@@ -2498,96 +2915,40 @@ const TicketBookingDetails = () => {
                               <div className="col-6 text-start text-dark">
                                 Base + Taxes
                               </div>
-                              <div className="col-6 text-end text-dark">
-                                ₹ {item?.fF?.toFixed(2) || "0.00"}
-                              </div>
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="col-6 text-end text-dark">
+                                    ₹ {item?.fF?.toFixed(2) || "0.00"}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="col-6 text-end text-dark">
+                                    ₹ {item?.airIQPrice?.toFixed(2) || "0.00"}
+                                  </div>
+                                </>
+                              )}
                             </div>
                             <div className="row w-100">
                               <div className="col-6 text-start text-dark">
                                 Service Fees
                               </div>
-                              <div className="col-6 text-end text-dark">
-                                ₹ {item?.sF?.toFixed(2) || "0.00"}
-                              </div>
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  <div className="col-6 text-end text-dark">
+                                    ₹ {item?.sF?.toFixed(2) || "0.00"}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="col-6 text-end text-dark">
+                                    ₹ {"0.00"}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
 
-                          <div className="text-center fw-bold fs-4 text-danger">
-                            {" "}
-                            Add Ons
-                          </div>
-
-                          <div className="summary-details">
-                            {/* Seats */}
-                            <div className="summary-item">
-                              <span className="label">Seat Selection</span>
-                              <div className="value">
-                                {selectedSeats.length > 0 ? (
-                                  selectedSeats.map((seat) => (
-                                    <span
-                                      key={seat.code}
-                                      className="selected-option d-block"
-                                    >
-                                      {seat.seatNo}{" "}
-                                      <span className="price">₹{seat.amt}</span>
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="not-selected">
-                                    Not selected
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Meals */}
-                            <div className="summary-item">
-                              <span className="label">Meal</span>
-                              <div className="value">
-                                {selectedMeals.length > 0 ? (
-                                  selectedMeals.map((meal) => (
-                                    <span
-                                      key={meal.code}
-                                      className="selected-option d-block"
-                                    >
-                                      {meal.dsc}{" "}
-                                      <span className="price">₹{meal.amt}</span>
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="not-selected">
-                                    Not selected
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Baggage */}
-                            <div className="summary-item">
-                              <span className="label">Baggage</span>
-                              <div className="value">
-                                {selectedBaggage.length > 0 ? (
-                                  selectedBaggage.map((baggage) => (
-                                    <span
-                                      key={baggage.code}
-                                      className="selected-option d-block"
-                                    >
-                                      {baggage.dsc}{" "}
-                                      <span className="price">
-                                        ₹{baggage.amt}
-                                      </span>
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="not-selected">
-                                    Standard (15 Kg)
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Return Breakdown */}
                           {flightdata && (
                             <div className="mb-3">
                               <h6 className="fw-bold text-dark">Return Fare</h6>
@@ -2609,6 +2970,89 @@ const TicketBookingDetails = () => {
                               </div>
                             </div>
                           )}
+                          {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                            <>
+                              <div className="text-center fw-bold fs-4 text-danger">
+                                {" "}
+                                Add Ons
+                              </div>
+                              <div className="summary-details">
+                                {/* Seats */}
+                                <div className="summary-item">
+                                  <span className="label">Seat Selection</span>
+                                  <div className="value">
+                                    {selectedSeats.length > 0 ? (
+                                      selectedSeats.map((seat) => (
+                                        <span
+                                          key={seat.code}
+                                          className="selected-option d-block"
+                                        >
+                                          {seat.seatNo}{" "}
+                                          <span className="price">
+                                            ₹{seat.amt}
+                                          </span>
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="not-selected">
+                                        Not selected
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Meals */}
+                                <div className="summary-item">
+                                  <span className="label">Meal</span>
+                                  <div className="value">
+                                    {selectedMeals.length > 0 ? (
+                                      selectedMeals.map((meal) => (
+                                        <span
+                                          key={meal.code}
+                                          className="selected-option d-block"
+                                        >
+                                          {meal.dsc}{" "}
+                                          <span className="price">
+                                            ₹{meal.amt}
+                                          </span>
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="not-selected">
+                                        Not selected
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Baggage */}
+                                <div className="summary-item">
+                                  <span className="label">Baggage</span>
+                                  <div className="value">
+                                    {selectedBaggage.length > 0 ? (
+                                      selectedBaggage.map((baggage) => (
+                                        <span
+                                          key={baggage.code}
+                                          className="selected-option d-block"
+                                        >
+                                          {baggage.dsc}{" "}
+                                          <span className="price">
+                                            ₹{baggage.amt}
+                                          </span>
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="not-selected">
+                                        Standard (15 Kg)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <></>
+                          )}
 
                           <hr />
 
@@ -2628,6 +3072,9 @@ const TicketBookingDetails = () => {
                           </div>
 
                           <button
+                            style={{
+                              display: !addonCondition ? "none" : "block",
+                            }}
                             className="btn-proceed"
                             disabled={!selectedSeats}
                             onClick={() => SavePassengerWithSSR()}
@@ -2644,122 +3091,6 @@ const TicketBookingDetails = () => {
                     })()}
                   </div>
                 </div>
-
-                {/* {flightdata ? (
-                  <>
-                    <div className="row mt-4">
-                      <div className="col-12 pricee-tag">
-                        <h2 className="fs-4 fs-lg-2">
-                          Price Summary ({flightdata?.bF})
-                        </h2>
-                      </div>
-                      <div className="border">
-                        {(() => {
-                         
-                          let totalTaxes = 0;
-                          let totalFare = 0;
-
-                          return (
-                            <>
-                              {flightdata?.paxFareBreakUp
-                                ?.sort((a, b) => a.paxType - b.paxType)
-                                .map((pax, index) => {
-                                  let paxLabel = "";
-                                  if (pax.paxType === 1) paxLabel = "Adult";
-                                  if (pax.paxType === 2) paxLabel = "Child";
-                                  if (pax.paxType === 3) paxLabel = "Infant";
-
-                                  const paxTaxes =
-                                    (pax.tax || 0) +
-                                    (pax.gst || 0) +
-                                    (pax.yqTax || 0) +
-                                    (pax.yrTax || 0);
-
-                                  const paxFare =
-                                    (pax.baseFare || 0) + paxTaxes;
-
-                                  totalTaxes += paxTaxes;
-                                  totalFare += paxFare;
-                                  return (
-                                    <div key={index} className="mb-3">
-                                      <div className="row w-100">
-                                        <div className="col-6 text-start text-dark">
-                                          {paxLabel} ({pax?.paxCount || 1})
-                                        </div>
-                                        <div className="col-6 text-end text-dark">
-                                          Base Fare: <span>&#8377;</span>{" "}
-                                          {pax.baseFare
-                                            ? pax.baseFare.toFixed(2)
-                                            : "0.00"}
-                                        </div>
-                                      </div>
-
-                                      <div className="row w-100">
-                                        <div className="col-6 text-start text-dark">
-                                          Taxes
-                                        </div>
-                                        <div className="col-6 text-end text-dark">
-                                          <span>&#8377;</span>{" "}
-                                          {pax?.tax
-                                            ? pax.tax.toFixed(2)
-                                            : "0.00"}
-                                        </div>
-                                      </div>
-
-                                      <div className="row w-100">
-                                        <div className="col-6 text-start text-dark">
-                                          Total
-                                        </div>
-                                        <div className="col-6 text-end text-success fw-bold">
-                                          <span>&#8377;</span>{" "}
-                                          {(
-                                            (pax.baseFare || 0) + (pax.tax || 0)
-                                          ).toFixed(2)}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-
-                              
-                              <div className="row my-3 w-100 ">
-                                <div className="col-6 text-start text-dark">
-                                  Discount
-                                </div>
-                                <div className="col-6 text-end text-dark">
-                                  <span>&#8377;</span> 0.00
-                                </div>
-                              </div>
-
-                              
-                              <div className="row mb-3 w-100 ">
-                                <div className="col-6 text-start text-dark">
-                                  Service Fees
-                                </div>
-                                <div className="col-6 text-end text-dark">
-                                  <span>&#8377;</span>{" "}
-                                  {flightdata?.sF?.toFixed(2) || "0.00"}
-                                </div>
-                              </div>
-
-                              <div className="bottomlito"></div>
-
-                              <div className="row mb-3 w-100 ">
-                                <div className="col-6 text-start fs-4 fw-bolder text-success">
-                                  Total
-                                </div>
-                                <div className="col-6 text-end text-success fw-bolder fs-4">
-                                  <span>&#8377;</span>{" "}
-                                  {flightdata?.fF?.toFixed(2) || "0.00"}
-                                </div>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </>
-                ) : null} */}
               </div>
             </div>
           </div>
@@ -2818,7 +3149,9 @@ const TicketBookingDetails = () => {
 
       <Modal
         isOpen={isModalOpen}
-        onRequestClose={closeModal}
+        onRequestClose={() => setIsModalOpen(false)}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
         contentLabel="Price Recheck Response"
         style={{
           overlay: {
@@ -2846,20 +3179,28 @@ const TicketBookingDetails = () => {
       >
         <div style={{ height: "100%" }}>
           {/* Header */}
+
           <div
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #f25e0e 0%, #f91d1d 100%)",
               color: "white",
               padding: "20px",
               textAlign: "center",
               position: "sticky",
               top: "0",
               zIndex: "10",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
             <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "600" }}>
               Price Recheck Results
             </h2>
+
+            <button className="btn2" onClick={() => setIsModalOpen(false)}>
+              X
+            </button>
           </div>
 
           {/* Content */}
@@ -2996,6 +3337,291 @@ const TicketBookingDetails = () => {
                   </div>
                 </div>
 
+                {/* Baggage Information */}
+                <div
+                  style={{
+                    background: "#f0f8ff",
+                    border: "1px solid #b3d9ff",
+                    borderRadius: "8px",
+                    padding: "16px",
+                  }}
+                >
+                  <h4 style={{ margin: "0 0 16px 0", color: "#2d3436" }}>
+                    Baggage Information
+                    {/* {reprice_data.results.isBaggageChanged && ( */}
+                    <span
+                      style={{
+                        background: "#ffc107",
+                        color: "#856404",
+                        fontSize: "12px",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                        marginLeft: "8px",
+                      }}
+                    >
+                      CHANGED
+                    </span>
+                    {/* )} */}
+                  </h4>
+
+                  {reprice_data.results.itineraryItems?.map((item, index) => {
+                    if (item.type !== "FLIGHT") return null;
+
+                    const flight = item.itemFlight;
+                    const segments = flight.segments?.[0];
+                    const isReturn = index === 1;
+
+                    if (!segments || segments.length === 0) return null;
+
+                    return (
+                      <div
+                        key={item.itemCode}
+                        style={{
+                          marginBottom: "16px",
+                          padding: "12px",
+                          background: "white",
+                          borderRadius: "6px",
+                          border: "1px solid #e0e0e0",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            marginBottom: "12px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              background: isReturn ? "#28a745" : "#007bff",
+                              color: "white",
+                              padding: "3px 8px",
+                              borderRadius: "4px",
+                              fontSize: "11px",
+                              marginRight: "8px",
+                            }}
+                          >
+                            {isReturn ? "Return" : "Outbound"}
+                          </span>
+                          <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                            {flight.airlineName} {flight.flightNumber}
+                          </span>
+                        </div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "12px",
+                          }}
+                        >
+                          {/* Check-in Baggage */}
+                          <div
+                            style={{
+                              padding: "10px",
+                              background: "#f8f9fa",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                color: "#666",
+                                marginBottom: "4px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              Check-in Baggage
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "#2d3436",
+                              }}
+                            >
+                              {segments[0]?.bg || "Not specified"}
+                            </div>
+                            {segments.length > 1 && segments[1]?.bg && (
+                              <div
+                                style={{
+                                  fontSize: "12px",
+                                  color: "#666",
+                                  marginTop: "2px",
+                                }}
+                              >
+                                Via segment: {segments[1].bg}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Cabin Baggage */}
+                          <div
+                            style={{
+                              padding: "10px",
+                              background: "#f8f9fa",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                color: "#666",
+                                marginBottom: "4px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              Cabin Baggage
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "#2d3436",
+                              }}
+                            >
+                              {segments[0]?.cBg || "Not specified"}
+                            </div>
+                            {segments.length > 1 && segments[1]?.cBg && (
+                              <div
+                                style={{
+                                  fontSize: "12px",
+                                  color: "#666",
+                                  marginTop: "2px",
+                                }}
+                              >
+                                Via segment: {segments[1].cBg}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr",
+                            gap: "12px",
+                          }}
+                        >
+                          {" "}
+                          <div
+                            style={{
+                              padding: "10px",
+                              background: "#f8f9fa",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                color: "#666",
+                                marginBottom: "4px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              Add Ons Baggage
+                            </div>
+                            {/* <div
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "#2d3436",
+                              }}
+                            >
+                              {formatCurrency(
+                                reprice_data?.results?.addONs?.baggage
+                                  ?.totalAmt || 0
+                              )}
+                              
+                            </div> */}
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "#e8b51b",
+                                backgroundColor: "#fff3cd",
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                display: "inline-block",
+                                border: "1px solid #e8b51b",
+                              }}
+                            >
+                              11560
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Route Information for Baggage Context */}
+                        <div
+                          style={{
+                            marginTop: "8px",
+                            padding: "8px",
+                            background: "#f1f3f4",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            color: "#666",
+                          }}
+                        >
+                          <strong>Route:</strong> {segments[0]?.or?.aC} →{" "}
+                          {segments[segments.length - 1]?.ds?.aC}
+                          {segments.length > 1 && (
+                            <span style={{ marginLeft: "8px" }}>
+                              (via {segments[0]?.ds?.aC})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Baggage Change Notice */}
+                  {/* {reprice_data.results.isBaggageChanged && ( */}
+                  <div
+                    style={{
+                      background: "#fff3cd",
+                      border: "1px solid #ffeaa7",
+                      borderRadius: "6px",
+                      padding: "12px",
+                      marginTop: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "#856404",
+                        fontSize: "13px",
+                        fontWeight: "500",
+                      }}
+                    >
+                      ⚠️ Baggage allowance has been updated from the original
+                      search
+                    </div>
+                  </div>
+                  {/* )} */}
+
+                  {/* {!reprice_data.results.isBaggageChanged && (
+                    <div
+                      style={{
+                        background: "#d1edff",
+                        border: "1px solid #74b9ff",
+                        borderRadius: "6px",
+                        padding: "12px",
+                        marginTop: "12px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: "#0984e3",
+                          fontSize: "13px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        ✅ Baggage allowance confirmed - no changes from
+                        original search
+                      </div>
+                    </div>
+                  )} */}
+                </div>
+
                 {/* Fare Breakdown */}
                 <div
                   style={{
@@ -3036,6 +3662,38 @@ const TicketBookingDetails = () => {
                         {formatCurrency(reprice_data.results.taxAndSurcharge)}
                       </span>
                     </div>
+                    {reprice_data.results.addONs?.seat?.totalAmt > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <span style={{ color: "#636e72" }}>Seat Selection</span>
+                        <span style={{ fontWeight: "500" }}>
+                          {formatCurrency(
+                            reprice_data.results.addONs.seat.totalAmt
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {reprice_data.results.addONs?.seat?.totalAmt > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <span style={{ color: "#636e72" }}>
+                          Baggage Selection
+                        </span>
+                        <span style={{ fontWeight: "500" }}>
+                          {formatCurrency(
+                            reprice_data.results.addONs.baggage.totalAmt
+                          )}
+                        </span>
+                      </div>
+                    )}
                     {reprice_data.results.insuranceAmount > 0 && (
                       <div
                         style={{
@@ -3071,86 +3729,258 @@ const TicketBookingDetails = () => {
                     </div>
                   </div>
                 </div>
-
                 {/* Flight Details */}
-                {reprice_data.results.itineraryItems?.[0]?.itemFlight && (
-                  <div
-                    style={{
-                      background: "#f8f9fa",
-                      borderRadius: "8px",
-                      padding: "16px",
-                    }}
-                  >
-                    <h4 style={{ margin: "0 0 12px 0", color: "#2d3436" }}>
-                      Flight Details
-                    </h4>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px",
-                      }}
-                    >
+                <div
+                  style={{
+                    background: "#f8f9fa",
+                    borderRadius: "8px",
+                    padding: "16px",
+                  }}
+                >
+                  <h4 style={{ margin: "0 0 16px 0", color: "#2d3436" }}>
+                    Flight Details
+                  </h4>
+
+                  {reprice_data.results.itineraryItems?.map((item, index) => {
+                    if (item.type !== "FLIGHT") return null;
+
+                    const flight = item.itemFlight;
+                    const segment = flight.segments?.[0]?.[0];
+                    const isReturn = index === 1;
+
+                    return (
                       <div
+                        key={item.itemCode}
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
+                          marginBottom: "20px",
+                          padding: "16px",
+                          background: "white",
+                          borderRadius: "8px",
+                          border: "1px solid #e0e0e0",
                         }}
                       >
-                        <span style={{ fontWeight: "600", color: "#2d3436" }}>
-                          {
-                            reprice_data.results.itineraryItems[0].itemFlight
-                              .airlineName
-                          }
-                          {
-                            reprice_data.results.itineraryItems[0].itemFlight
-                              .flightNumber
-                          }
-                        </span>
-                        <span
+                        {/* Flight Header */}
+                        <div
                           style={{
-                            background:
-                              reprice_data.results.itineraryItems[0].itemFlight
-                                .fareIdentifier.colorCode,
-                            color: "white",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            fontSize: "12px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "16px",
                           }}
                         >
-                          {
-                            reprice_data.results.itineraryItems[0].itemFlight
-                              .fareIdentifier.name
-                          }
-                        </span>
+                          <div>
+                            <span
+                              style={{
+                                background: isReturn ? "#28a745" : "#007bff",
+                                color: "white",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                fontSize: "12px",
+                                marginRight: "8px",
+                              }}
+                            >
+                              {isReturn ? "Return" : "Outbound"}
+                            </span>
+                            <span
+                              style={{
+                                fontWeight: "600",
+                                color: "#2d3436",
+                                fontSize: "16px",
+                              }}
+                            >
+                              {flight.airlineName} {flight.flightNumber}
+                            </span>
+                          </div>
+                          <span
+                            style={{
+                              background: flight.fareIdentifier.colorCode,
+                              color: "white",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            {flight.fareIdentifier.name}
+                          </span>
+                        </div>
+
+                        {/* Route Information */}
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr auto 1fr",
+                            alignItems: "center",
+                            gap: "20px",
+                            marginBottom: "16px",
+                          }}
+                        >
+                          {/* Departure */}
+                          <div style={{ textAlign: "left" }}>
+                            <div
+                              style={{
+                                fontSize: "18px",
+                                fontWeight: "600",
+                                color: "#2d3436",
+                              }}
+                            >
+                              {formatTimeok(
+                                segment?.or?.dT || flight.departureAt
+                              )}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                color: "#666",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              {formatDateok(
+                                segment?.or?.dT || flight.departureAt
+                              )}
+                            </div>
+                            <div
+                              style={{ fontWeight: "600", fontSize: "14px" }}
+                            >
+                              {segment?.or?.aC || flight.origin}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#666" }}>
+                              {segment?.or?.cN}
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#999" }}>
+                              {segment?.or?.aN}
+                            </div>
+                          </div>
+
+                          {/* Flight Info */}
+                          <div
+                            style={{ textAlign: "center", padding: "0 20px" }}
+                          >
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                color: "#666",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              {flight.stopCount.stops === 0
+                                ? "Non-stop"
+                                : `${flight.stopCount.stops} stop(s)`}
+                            </div>
+                            <div
+                              style={{
+                                height: "2px",
+                                background: "#ddd",
+                                position: "relative",
+                                width: "60px",
+                                margin: "8px 0",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  right: "-6px",
+                                  top: "-4px",
+                                  width: "0",
+                                  height: "0",
+                                  borderLeft: "6px solid #ddd",
+                                  borderTop: "5px solid transparent",
+                                  borderBottom: "5px solid transparent",
+                                }}
+                              ></div>
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#666" }}>
+                              {Math.floor(
+                                (new Date(segment?.ds?.aT || flight.arrivalAt) -
+                                  new Date(
+                                    segment?.or?.dT || flight.departureAt
+                                  )) /
+                                  (1000 * 60)
+                              )}{" "}
+                              min
+                            </div>
+                          </div>
+
+                          {/* Arrival */}
+                          <div style={{ textAlign: "right" }}>
+                            <div
+                              style={{
+                                fontSize: "18px",
+                                fontWeight: "600",
+                                color: "#2d3436",
+                              }}
+                            >
+                              {formatTimeok(
+                                segment?.ds?.aT || flight.arrivalAt
+                              )}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "12px",
+                                color: "#666",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              {formatDateok(
+                                segment?.ds?.aT || flight.arrivalAt
+                              )}
+                            </div>
+                            <div
+                              style={{ fontWeight: "600", fontSize: "14px" }}
+                            >
+                              {segment?.ds?.aC || flight.destination}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#666" }}>
+                              {segment?.ds?.cN}
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#999" }}>
+                              {segment?.ds?.aN}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Individual Fare Details */}
+                        <div
+                          style={{
+                            background: "#f8f9fa",
+                            padding: "12px",
+                            borderRadius: "6px",
+                            border: "1px solid #e9ecef",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#666",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            Fare details for this flight:
+                          </div>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr",
+                              gap: "8px",
+                            }}
+                          >
+                            <div style={{ fontSize: "13px" }}>
+                              <span style={{ color: "#666" }}>Base Fare: </span>
+                              <span style={{ fontWeight: "500" }}>
+                                {formatCurrency(flight.fareQuote.baseFare)}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "13px" }}>
+                              <span style={{ color: "#666" }}>Total: </span>
+                              <span style={{ fontWeight: "600" }}>
+                                {formatCurrency(flight.fareQuote.finalFare)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: "14px", color: "#636e72" }}>
-                        <p style={{ margin: "4px 0" }}>
-                          Departure:{" "}
-                          {formatDateTime(
-                            reprice_data.results.itineraryItems[0].itemFlight
-                              .departureAt
-                          )}
-                        </p>
-                        <p style={{ margin: "4px 0" }}>
-                          Arrival:{" "}
-                          {formatDateTime(
-                            reprice_data.results.itineraryItems[0].itemFlight
-                              .arrivalAt
-                          )}
-                        </p>
-                        <p style={{ margin: "4px 0" }}>
-                          Stops:{" "}
-                          {reprice_data.results.itineraryItems[0].itemFlight
-                            .stopCount.stops === 0
-                            ? "Non-stop"
-                            : `${reprice_data.results.itineraryItems[0].itemFlight.stopCount.stops} stop(s)`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
 
                 {/* Passenger Details */}
                 <div
@@ -3335,7 +4165,7 @@ const TicketBookingDetails = () => {
               disabled={reprice_loading || booking_loading}
               style={{
                 backgroundColor:
-                  reprice_loading || booking_loading ? "#ccc" : "#667eea",
+                  reprice_loading || booking_loading ? "#ccc" : "red",
                 color: "white",
                 border: "none",
                 borderRadius: "6px",
@@ -3357,6 +4187,7 @@ const TicketBookingDetails = () => {
         </div>
       </Modal>
 
+      {/* Time Up modal */}
       <Modal
         isOpen={isModalOpensession}
         onRequestClose={handleCloseModal}
@@ -3437,6 +4268,7 @@ const TicketBookingDetails = () => {
         </div>
       </Modal>
       <div dangerouslySetInnerHTML={{ __html: modalCSS }} />
+      {/* Booking Details modal */}
       <Modal
         isOpen={bookingModal}
         onRequestClose={() => handleCloseBookingModal()}
@@ -3457,23 +4289,31 @@ const TicketBookingDetails = () => {
           ) : (
             <>
               {(() => {
-                const results =
-                  get_booking_data?.flight_itinerary?.responseData?.results;
-                const flight = results?.itineraryItems?.[0]?.itemFlight || {};
-                const segment = flight?.segments?.[0]?.[0] || {};
-                const passenger = results?.passengers || {};
+                const currentBookingData =
+                  isReturn == 0 ? get_booking_data : return_get_booking_data;
 
-                const bookingStatus =
-                  get_booking_data?.bookingStatus || "CONFIRMED";
+                const results =
+                  currentBookingData?.flight_itinerary?.responseData?.results;
+                const flight = results?.itineraryItems?.[0]?.itemFlight || {};
+                const Returnflight =
+                  results?.itineraryItems?.[1]?.itemFlight || {};
+                const segment = flight?.segments?.[0]?.[0] || {};
+
+                const retunsegment = Returnflight?.segments?.[0]?.[0];
+
+                const currentBookingStatus =
+                  isReturn == 0
+                    ? get_booking_data?.bookingStatus || "CONFIRMED"
+                    : return_get_booking_data?.bookingStatus || "CONFIRMED";
+
                 return (
                   <>
                     {/* HEADER */}
                     <div
-                      // className={`-header-gradient text-white p-4 position-relative`}
                       className={`p-4 position-relative text-white ${
-                        bookingStatus === "FAILED"
+                        currentBookingStatus === "FAILED"
                           ? "modal-header-failed"
-                          : bookingStatus === "PENDING"
+                          : currentBookingStatus === "PENDING"
                           ? "modal-header-pending"
                           : "modal-header-gradient"
                       }`}
@@ -3528,11 +4368,106 @@ const TicketBookingDetails = () => {
                       </div>
 
                       <div className="d-flex justify-content-between align-items-end">
-                        <div>
+                        <div className="d-flex w-100 gap-2">
+                          {okres && (
+                            <button
+                              className={`btn flex-fill ${
+                                isReturn === 0
+                                  ? "btn-light"
+                                  : "btn-outline-light"
+                              }`}
+                              onClick={() => setIsReturn(0)}
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "500",
+                                borderColor:
+                                  isReturn === 0
+                                    ? "white"
+                                    : "rgba(255, 255, 255, 0.3)",
+                                color:
+                                  isReturn === 0
+                                    ? "black"
+                                    : "rgba(255, 255, 255, 0.9)",
+                                backgroundColor:
+                                  isReturn === 0 ? "white" : "transparent",
+                                transition: "all 0.3s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (isReturn !== 0) {
+                                  e.target.style.backgroundColor = "black";
+                                  e.target.style.borderColor = "black";
+                                  e.target.style.color = "white";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (isReturn !== 0) {
+                                  e.target.style.backgroundColor =
+                                    "transparent";
+                                  e.target.style.borderColor =
+                                    "rgba(255, 255, 255, 0.3)";
+                                  e.target.style.color =
+                                    "rgba(255, 255, 255, 0.9)";
+                                }
+                              }}
+                            >
+                              Outbound Flight
+                            </button>
+                          )}
+                          {okres && (
+                            <button
+                              className={`btn flex-fill ${
+                                isReturn === 1
+                                  ? "btn-light"
+                                  : "btn-outline-light"
+                              }`}
+                              onClick={() => setIsReturn(1)}
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: "500",
+                                borderColor:
+                                  isReturn === 1
+                                    ? "white"
+                                    : "rgba(255, 255, 255, 0.3)",
+                                color:
+                                  isReturn === 1
+                                    ? "black"
+                                    : "rgba(255, 255, 255, 0.9)",
+                                backgroundColor:
+                                  isReturn === 1 ? "white" : "transparent",
+                                transition: "all 0.3s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (isReturn !== 1) {
+                                  e.target.style.backgroundColor = "black";
+                                  e.target.style.borderColor = "black";
+                                  e.target.style.color = "white";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (isReturn !== 1) {
+                                  e.target.style.backgroundColor =
+                                    "transparent";
+                                  e.target.style.borderColor =
+                                    "rgba(255, 255, 255, 0.3)";
+                                  e.target.style.color =
+                                    "rgba(255, 255, 255, 0.9)";
+                                }
+                              }}
+                            >
+                              Return Flight
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="scrollable-content">
+                      <div className="d-flex justify-content-between align-items-end">
+                        {/* <div>
                           <p
                             className="mb-1"
                             style={{
-                              color: "rgba(255, 255, 255, 0.8)",
+                              color: "rgba(0, 0, 0, 0.8)",
                               fontSize: "0.875rem",
                             }}
                           >
@@ -3546,14 +4481,14 @@ const TicketBookingDetails = () => {
                               letterSpacing: "2px",
                             }}
                           >
-                            {get_booking_data?.bmsBookingCode?.toUpperCase()}
+                            {currentBookingData?.bmsBookingCode?.toUpperCase()}
                           </p>
-                        </div>
-                        <div className="text-end">
+                        </div> */}
+                        <div className="text-start">
                           <p
                             className="mb-1"
                             style={{
-                              color: "rgba(255, 255, 255, 0.8)",
+                              color: "rgba(0, 0, 0, 0.8)",
                               fontSize: "0.875rem",
                             }}
                           >
@@ -3567,13 +4502,21 @@ const TicketBookingDetails = () => {
                               letterSpacing: "2px",
                             }}
                           >
-                            {flight?.pnrDetails?.[0]?.pnr}
+                            {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                              <>
+                                {isReturn == 0 ? (
+                                  <>{flight?.pnrDetails?.[0]?.pnr}</>
+                                ) : (
+                                  <>{Returnflight?.pnrDetails?.[0]?.pnr}</>
+                                )}
+                              </>
+                            ) : (
+                              <>{getBookingData?.pnr}</>
+                            )}
                           </p>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="scrollable-content">
                       {/* Flight Route */}
                       <div className="section-card flight-card">
                         <div className="d-flex justify-content-between align-items-center mb-4">
@@ -3595,22 +4538,59 @@ const TicketBookingDetails = () => {
                             </div>
                             <div>
                               <h3 className="h5 mb-1 fw-bold">
-                                {flight?.airlineName}
+                                {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                  <>
+                                    {isReturn == 0 ? (
+                                      <> {flight?.airlineName}</>
+                                    ) : (
+                                      <> {Returnflight?.airlineName}</>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>{getBookingData?.airline}</>
+                                )}
                               </h3>
                               <p className="mb-0 text-muted small">
-                                Flight {flight?.flightNumber} •{" "}
-                                {flight?.stopCount?.stops === 0
-                                  ? "Non-stop"
-                                  : `${flight?.stopCount?.stops} stop(s)`}
+                                Flight{" "}
+                                {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                  <>
+                                    {isReturn == 0 ? (
+                                      <>{flight?.flightNumber}</>
+                                    ) : (
+                                      <>{Returnflight?.flightNumber}</>
+                                    )}{" "}
+                                    •{" "}
+                                    {isReturn == 0
+                                      ? flight?.stopCount?.stops === 0
+                                        ? "Non-stop"
+                                        : `${flight?.stopCount?.stops} stop(s)`
+                                      : Returnflight?.stopCount?.stops === 0
+                                      ? "Non-stop"
+                                      : `${Returnflight?.stopCount?.stops} stop(s)`}
+                                  </>
+                                ) : (
+                                  <>{getBookingData?.flight_no}</>
+                                )}
                               </p>
                             </div>
                           </div>
                           <div className="text-end">
                             <p className="mb-1 text-muted small">Duration</p>
                             <p className="mb-0 fw-semibold">
-                              {calculateDuration(
-                                segment?.or?.dT,
-                                segment?.ds?.aT
+                              {isReturn == 0 ? (
+                                <>
+                                  {calculateDuration(
+                                    segment?.or?.dT,
+                                    segment?.ds?.aT
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  {calculateDuration(
+                                    retunsegment?.or?.dT,
+                                    retunsegment?.ds?.aT
+                                  )}
+                                </>
                               )}
                             </p>
                           </div>
@@ -3619,25 +4599,79 @@ const TicketBookingDetails = () => {
                         <div className="d-flex align-items-center justify-content-between">
                           <div className="city-card flex-fill">
                             <p className="h3 mb-1 fw-bold text-primary">
-                              {segment?.or?.aC}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{segment?.or?.aC}</>
+                                  ) : (
+                                    <>{retunsegment?.or?.aC}</>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  {getBookingData?.sector
+                                    ?.split("//")[0]
+                                    ?.trim()}
+                                </>
+                              )}
                             </p>
                             <p className="mb-2 text-muted small">
-                              {segment?.or?.cN}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{segment?.or?.cN} </>
+                                  ) : (
+                                    <>{retunsegment?.or?.cN}</>
+                                  )}
+                                </>
+                              ) : (
+                                <></>
+                              )}
                             </p>
                             <div
                               className="mb-2 text-muted"
                               style={{ fontSize: "0.75rem" }}
                             >
-                              {formatDay(segment?.or?.dT)}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{formatDay(segment?.or?.dT)}</>
+                                  ) : (
+                                    <>{formatDay(retunsegment?.or?.dT)}</>
+                                  )}
+                                </>
+                              ) : (
+                                <>{item?.departure_date}</>
+                              )}
                             </div>
                             <div className="h5 mb-1 fw-bold text-primary">
-                              {formatTime1(segment?.or?.dT)}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{formatTime1(segment?.or?.dT)}</>
+                                  ) : (
+                                    <>{formatTime1(retunsegment?.or?.dT)}</>
+                                  )}
+                                </>
+                              ) : (
+                                <>{getBookingData?.departure_time}</>
+                              )}
                             </div>
                             <div
                               className="text-muted"
                               style={{ fontSize: "0.75rem" }}
                             >
-                              {formatDate(segment?.or?.dT)}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{formatDate(segment?.or?.dT)}</>
+                                  ) : (
+                                    <>{formatDate(retunsegment?.or?.dT)}</>
+                                  )}
+                                </>
+                              ) : (
+                                <></>
+                              )}
                             </div>
                           </div>
 
@@ -3670,25 +4704,79 @@ const TicketBookingDetails = () => {
 
                           <div className="city-card flex-fill">
                             <p className="h3 mb-1 fw-bold text-primary">
-                              {segment?.ds?.aC}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{segment?.ds?.aC}</>
+                                  ) : (
+                                    <>{retunsegment?.ds?.aC}</>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  {getBookingData?.sector
+                                    ?.split("//")[1]
+                                    ?.trim()}
+                                </>
+                              )}
                             </p>
                             <p className="mb-2 text-muted small">
-                              {segment?.ds?.cN}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{segment?.ds?.cN}</>
+                                  ) : (
+                                    <>{retunsegment?.ds?.cN}</>
+                                  )}
+                                </>
+                              ) : (
+                                <></>
+                              )}
                             </p>
                             <div
                               className="mb-2 text-muted"
                               style={{ fontSize: "0.75rem" }}
                             >
-                              {formatDay(segment?.ds?.aT)}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{formatDay(segment?.ds?.aT)}</>
+                                  ) : (
+                                    <>{formatDay(retunsegment?.ds?.aT)}</>
+                                  )}
+                                </>
+                              ) : (
+                                <>{getBookingData?.arrival_date}</>
+                              )}
                             </div>
                             <div className="h5 mb-1 fw-bold text-primary">
-                              {formatTime1(segment?.ds?.aT)}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{formatTime1(segment?.ds?.aT)}</>
+                                  ) : (
+                                    <>{formatTime1(retunsegment?.ds?.aT)}</>
+                                  )}
+                                </>
+                              ) : (
+                                <>{getBookingData?.arrival_time}</>
+                              )}
                             </div>
                             <div
                               className="text-muted"
                               style={{ fontSize: "0.75rem" }}
                             >
-                              {formatDate(segment?.ds?.aT)}
+                              {item?.fareIdentifier?.code !== "airIQ_fare" ? (
+                                <>
+                                  {isReturn === 0 ? (
+                                    <>{formatDate(segment?.ds?.aT)}</>
+                                  ) : (
+                                    <>{formatDate(retunsegment?.ds?.aT)}</>
+                                  )}
+                                </>
+                              ) : (
+                                <></>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -3830,7 +4918,13 @@ const TicketBookingDetails = () => {
                             >
                               Check-in
                             </p>
-                            <p className="mb-0 fw-semibold">{segment.bg}</p>
+                            <p className="mb-0 fw-semibold">
+                              {isReturn === 0 ? (
+                                <>{segment.bg}</>
+                              ) : (
+                                <>{retunsegment.bg}</>
+                              )}
+                            </p>
                           </div>
                         </div>
                         <div className="col-md-6 mb-3">
@@ -3842,7 +4936,13 @@ const TicketBookingDetails = () => {
                             >
                               Cabin
                             </p>
-                            <p className="mb-0 fw-semibold">{segment.cBg}</p>
+                            <p className="mb-0 fw-semibold">
+                              {isReturn === 0 ? (
+                                <>{segment.cBg}</>
+                              ) : (
+                                <>{retunsegment.cBg}</>
+                              )}
+                            </p>
                           </div>
                         </div>
                       </div>
