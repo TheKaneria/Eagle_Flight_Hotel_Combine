@@ -765,7 +765,15 @@ const Navbar = () => {
   };
 
   return (
-    <div className="container-fluid" style={{ position: "sticky", top:"0px", zIndex:"999", backgroundColor:"var(--color-white)" }}>
+    <div
+      className="container-fluid"
+      style={{
+        position: "sticky",
+        top: "0px",
+        zIndex: "999",
+        backgroundColor: "var(--color-white)",
+      }}
+    >
       <div className="container containernav">
         <div className="navbarcont">
           {/* Logo */}
