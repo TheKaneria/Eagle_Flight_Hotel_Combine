@@ -110,3 +110,8 @@ export const walletApi = newAirlineURL + "wallet";
 export const bookingget = newAirlineURL + "bookings";
 
 export const Payment_Api = BaseUrl2 + "payment-initiate";
+
+// Hotel API
+
+const HotelBaseUrl = "https://hotel-api-sandbox.travclan.com/api/v1/";
+export const locationAutosuggestApi = HotelBaseUrl + "locations/search/";

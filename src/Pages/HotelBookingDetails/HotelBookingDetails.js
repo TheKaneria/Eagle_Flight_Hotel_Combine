@@ -1,11 +1,30 @@
 import React, { useState } from "react";
 import Modal from "react-modal";
+import {
+  FaRunning,
+  FaWifi,
+  FaSnowflake,
+  FaBroom,
+  FaSwimmingPool,
+  FaUtensils,
+  FaBed,
+  FaCar,
+  FaConciergeBell,
+  FaSmokingBan,
+  FaDog,
+  FaCreditCard,
+  FaCalendarAlt,
+  FaChild,
+  FaUser,
+} from "react-icons/fa";
+import { MdDashboard, MdAccessTime, MdEventNote } from "react-icons/md";
+import { GiLion, GiForest, GiPartyPopper } from "react-icons/gi";
+import { BsBuildingFill, BsClockHistory } from "react-icons/bs";
 import "./HotelBookingDetails.css";
+import RoomTypes from "../../Components/RoomType/RoomTypes";
 
-// Set app element for accessibility
 Modal.setAppElement("#root");
 
-// Hotel images organized by category
 const hotelImages = {
   all: [
     {
@@ -184,6 +203,199 @@ function HotelBookingDetails() {
           </button>
         </div>
       </div>
+
+      {/* About Section */}
+      <div className="about-section">
+        <h2 className="section-title">About us</h2>
+        <p className="about-text">
+          Get your trip off to a great start with a stay at this property, which
+          offers free Wi-Fi in all rooms. Conveniently situated in the Sasan Gir
+          part of Sasan Gir, this property puts you close to attractions and
+          interesting dining options. Don't leave before paying a visit to the
+          famous Gir National Park. Rated with 5 stars, this high-quality
+          property provides guests with access to massage, restaurant and
+          fitness center on-site.
+        </p>
+      </div>
+
+      {/* Highlights Section */}
+      <div className="highlights-section">
+        <h2 className="section-title">Highlights</h2>
+        <div className="highlights-grid">
+          <div className="highlight-item">
+            <FaRunning className="highlight-icon" />
+            <span className="highlight-text">Great for activities</span>
+          </div>
+          <div className="highlight-item">
+            <MdDashboard className="highlight-icon" />
+            <span className="highlight-text">Front desk [24-hour]</span>
+          </div>
+          <div className="highlight-item">
+            <FaWifi className="highlight-icon" />
+            <span className="highlight-text">Free Wi-Fi in all rooms</span>
+          </div>
+          <div className="highlight-item">
+            <FaSnowflake className="highlight-icon" />
+            <span className="highlight-text">Air conditioning</span>
+          </div>
+          <div className="highlight-item">
+            <FaBroom className="highlight-icon" />
+            <span className="highlight-text">Daily housekeeping</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Facilities Section */}
+      <div className="facilities-section">
+        <h2 className="section-title">Facilities</h2>
+        <div className="facilities-grid">
+          <div className="facility-item">
+            <FaSwimmingPool className="facility-icon" />
+            <span>Swimming pool</span>
+          </div>
+          <div className="facility-item">
+            <FaWifi className="facility-icon" />
+            <span>Free Wi-Fi</span>
+          </div>
+          <div className="facility-item">
+            <FaUtensils className="facility-icon" />
+            <span>Restaurants</span>
+          </div>
+          <div className="facility-item">
+            <FaConciergeBell className="facility-icon" />
+            <span>Room service</span>
+          </div>
+          <div className="facility-item">
+            <MdDashboard className="facility-icon" />
+            <span>Front desk [24-hour]</span>
+          </div>
+          <div className="facility-item">
+            <FaCar className="facility-icon" />
+            <span>Shuttle service</span>
+          </div>
+          <div className="facility-item">
+            <FaCar className="facility-icon" />
+            <span>Car park</span>
+          </div>
+          <div className="facility-item">
+            <FaBroom className="facility-icon" />
+            <span>Daily housekeeping</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Closest Landmarks Section */}
+      <div className="landmarks-section">
+        <h2 className="section-title">Closest landmarks</h2>
+        <div className="landmarks-list">
+          <div className="landmark-item">
+            <GiLion className="landmark-icon" />
+            <span className="landmark-name">Devalia Safari Park</span>
+            <span className="landmark-distance">2.2 km</span>
+          </div>
+          <div className="landmark-item">
+            <BsBuildingFill className="landmark-icon" />
+            <span className="landmark-name">
+              Devaliya Park Interpretation Zone
+            </span>
+            <span className="landmark-distance">6.6 km</span>
+          </div>
+          <div className="landmark-item">
+            <GiForest className="landmark-icon" />
+            <span className="landmark-name">GIR Safari</span>
+            <span className="landmark-distance">7.4 km</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Property Rules Section */}
+      <div className="property-rules-section">
+        <h2 className="section-title">Property Rules</h2>
+        <div className="rules-grid">
+          <div className="rule-category">
+            <h3 className="rule-category-title">Check-in / Check-out</h3>
+            <div className="rule-item">
+              <MdAccessTime className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Check-in from</span>
+                <span className="rule-value">12:00 PM</span>
+              </div>
+            </div>
+            <div className="rule-item">
+              <BsClockHistory className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Check-out until</span>
+                <span className="rule-value">10:00 AM</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rule-category">
+            <h3 className="rule-category-title">General Policies</h3>
+            <div className="rule-item">
+              <FaSmokingBan className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Smoking</span>
+                <span className="rule-value">Not allowed</span>
+              </div>
+            </div>
+            <div className="rule-item">
+              <FaDog className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Pets</span>
+                <span className="rule-value">Not allowed</span>
+              </div>
+            </div>
+            <div className="rule-item">
+              <GiPartyPopper className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Parties/events</span>
+                <span className="rule-value">Not allowed</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rule-category">
+            <h3 className="rule-category-title">Age Requirements</h3>
+            <div className="rule-item">
+              <FaUser className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Minimum check-in age</span>
+                <span className="rule-value">18 years</span>
+              </div>
+            </div>
+            <div className="rule-item">
+              <FaChild className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Children allowed</span>
+                <span className="rule-value">Yes, all ages welcome</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rule-category">
+            <h3 className="rule-category-title">Payment & Cancellation</h3>
+            <div className="rule-item">
+              <FaCreditCard className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Payment options</span>
+                <span className="rule-value">Cash, Credit/Debit cards</span>
+              </div>
+            </div>
+            <div className="rule-item">
+              <FaCalendarAlt className="rule-icon" />
+              <div className="rule-content">
+                <span className="rule-label">Cancellation policy</span>
+                <span className="rule-value">
+                  Free cancellation up to 24 hours before check-in
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <RoomTypes />
 
       {/* React Modal Bottom Sheet */}
       <Modal

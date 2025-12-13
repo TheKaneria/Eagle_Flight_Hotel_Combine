@@ -45,8 +45,8 @@
   padding-top: 1rem;
   color: var(--color-black);
   /* padding-left: 74px; */
-  width: 490px;
-  max-height: 580px;
+  width: 490px !important;
+  max-height: 580px !important;
   background: var(--color-bg);
   position: relative;
   overflow-y: auto;

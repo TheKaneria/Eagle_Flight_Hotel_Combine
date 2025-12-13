@@ -27,6 +27,7 @@ import {
   FaSearch,
   FaRupeeSign,
   FaWifi,
+  FaHotel,
 } from "react-icons/fa";
 import { GoChevronDown } from "react-icons/go";
 import Select from "react-select";
@@ -60,10 +61,7 @@ import moment from "moment";
 import { Link, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { DatePicker } from "antd";
-import { Swiper, SwiperSlide } from "swiper/react";
 import { IoIosBatteryCharging } from "react-icons/io";
-import "swiper/css";
-import "swiper/css/navigation";
 import { useAuthContext } from "../../Context/auth_context";
 import { toast } from "react-toastify";
 import { MdFilterList } from "react-icons/md";
@@ -79,16 +77,11 @@ import {
 import { useBusContext } from "../../Context/bus_context";
 import Divider, { dividerClasses } from "@mui/material/Divider";
 import { useFlightContext } from "../../Context/flight_context";
-import {
-  Tabs,
-  Tab,
-  Box,
-  Skeleton,
-  Switch,
-  FormControlLabel,
-} from "@mui/material";
+import { Box, Skeleton } from "@mui/material";
 import Chip from "@mui/material/Chip";
 import airportData from "../../airports_airlines_data.json";
+import HomeHeroHotel from "../HomeHeroHotel/HomeHeroHotel";
+import { useHotelContext } from "../../Context/Hotel_context";
 
 const tabs = [
   { name: "Flights", icon: <FaPlaneDeparture size={25} />, key: "flights" },
@@ -319,6 +312,9 @@ const HomeHero = () => {
   const [returnflightTab, setReturnFlightTab] = useState(0);
   const [resultIndex, setResultIndex] = useState([]);
   const [flightProName, setFlightProName] = useState("travclan");
+  const [staycondition, setStayCondition] = useState(false);
+  const [hotelSearchtext, setHotelSearchText] = useState("");
+  const [selectedHotel, setSelectedHotel] = useState([]);
 
   const handleReturnFlightTabChange = (newValue) => {
     setReturnFlightTab(newValue);
@@ -380,7 +376,6 @@ const HomeHero = () => {
 
   useEffect(() => {
     if (flightdata?.length > 0) {
-      // ✅ Unique Classes
       const allClasses = flightdata.map((item) => {
         const classId = item.sg?.[0]?.cC;
         const className =
@@ -389,15 +384,11 @@ const HomeHero = () => {
       });
       const uniqueClassList = [...new Set(allClasses)];
       setUniqueClasses(uniqueClassList);
-
-      // ✅ Unique Flight Names
       const allFlightNames = flightdata.map(
         (item) => item.sg?.[0]?.al?.alN || "N/A"
       );
       const uniqueNames = [...new Set(allFlightNames)];
       setUniqueFlightNames(uniqueNames);
-
-      // ✅ Unique Stop Types
       const allStops = flightdata.map((item) => {
         const stops = item?.sg?.length ? item.sg.length - 1 : 0;
 
@@ -443,13 +434,9 @@ const HomeHero = () => {
 
     setTravellers((prev) => {
       const newValue = prev[type] + change;
-
-      // Ensure "Adult" value does not go below 1
       if (type === "adult" && newValue < 1) {
         return prev;
       }
-
-      // Prevent other categories (child, infant) from going below 0
       if (newValue < 0) {
         return prev;
       }
@@ -572,10 +559,10 @@ const HomeHero = () => {
   const getPublicIP = async () => {
     try {
       const response = await axios.get("https://api.ipify.org?format=json");
-      return response.data.ip; // Returns the public IP
+      return response.data.ip;
     } catch (error) {
       console.error("Error fetching public IP:", error);
-      return null; // Handle errors by returning null or a default value
+      return null;
     }
   };
 
@@ -676,7 +663,6 @@ const HomeHero = () => {
         setReturnDateList(data.data);
         const defaultmonth = moment(data.data[0].return_date, "YYYY-MM-DD");
         setDefaultMonth2(defaultmonth);
-
         // Notification("success", "Success!", data.message);
       } else {
         // Notification("error", "Error!", data.message || "Something went wrong");
@@ -763,12 +749,10 @@ const HomeHero = () => {
       airport_code: item?.departure_city_code,
       city_name: item?.departure_city,
     };
-
     setSelectedIndex(item);
     setFrom(fromOption || null);
     setSelectedValue(fromOption);
 
-    // Step 2: Create To Option manually
     const toOption = {
       value: item?.arrival_city_code,
       label: item?.arrival_city,
@@ -784,16 +768,11 @@ const HomeHero = () => {
     if (item.is_return == 1) {
       setSelectedDate2(item.return_departure_date);
     }
-
-    // Step 4: Set Travellers
     setTravellers({
       adult: Number(item.adult_travelers),
       child: Number(item.child_travelers),
       infant: Number(item.infant_travelers),
     });
-
-    // Step 5: Set condition
-
     setCondition(item?.get_condition);
   };
 
@@ -995,6 +974,26 @@ const HomeHero = () => {
     flightAirIq_Data,
   } = useFlightContext();
 
+  const { LocationSearchHotel, hotel_data, hotel_loading, clearHotelData } =
+    useHotelContext();
+
+  console.log("DAATAAA", JSON.stringify(hotel_data, null, 2));
+
+  useEffect(() => {
+    if (!hotelSearchtext.trim()) {
+      clearHotelData();
+      return;
+    }
+
+    if (hotelSearchtext.length < 3) return;
+
+    const delay = setTimeout(() => {
+      LocationSearchHotel(hotelSearchtext);
+    }, 500);
+
+    return () => clearTimeout(delay);
+  }, [hotelSearchtext]);
+
   useEffect(() => {
     if (from_city) {
       setFrom(from_city);
@@ -1178,10 +1177,6 @@ const HomeHero = () => {
     const transformedAirIQ = transformAirIQData(airIQData || []);
     let uniqueFlights = [...(flightData || [])];
 
-    console.log("airIQSearchData Input (length):", airIQData?.length || 0);
-    console.log("flight_Data Input (length):", flightData?.length || 0);
-    // console.log("flight_Data fareIdentifiers:", flightData?.map(f => f.fareIdentifier));
-
     // Preserve original fareIdentifier for flight_Data, with fallback
     uniqueFlights = uniqueFlights.map((flight) => ({
       ...flight,
@@ -1192,11 +1187,6 @@ const HomeHero = () => {
       },
       isAirIQOnly: false, // Initialize as false for TravClan flights
     }));
-
-    console.log(
-      "Valid flight_Data after normalization (length):",
-      uniqueFlights.length
-    );
 
     transformedAirIQ.forEach((airIQFlight, index) => {
       const airlineName = (airIQFlight.sg[0]?.al?.alN || "")
@@ -1209,14 +1199,6 @@ const HomeHero = () => {
       const key = `${airlineName}_${departureTime}_${duration}_${
         airIQFlight.sC || 0
       }`;
-
-      console.log(`AirIQ Flight ${index} Key:`, key, {
-        airline: airIQFlight.sg[0]?.al?.alN,
-        departure: airIQFlight.sg[0]?.or?.dT,
-        duration: airIQFlight.dr,
-        stops: airIQFlight.sC,
-        fareIdentifier: airIQFlight.fareIdentifier,
-      });
 
       const matchingFlight = uniqueFlights.find((f) => {
         const fAirline = (f.sg[0]?.al?.alN || "")
@@ -1235,14 +1217,6 @@ const HomeHero = () => {
       });
 
       if (matchingFlight) {
-        console.log(`Match found for AirIQ Flight ${index}:`, {
-          flight_Data_fF: matchingFlight.fF,
-          airIQPrice: airIQFlight.fF,
-          flight_Data_rI: matchingFlight.rI,
-          airIQTicketId: airIQFlight.rI,
-          fareIdentifier: matchingFlight.fareIdentifier,
-        });
-
         // Merge AirIQ data into matching flight
         matchingFlight.airIQPrice = airIQFlight.fF;
         matchingFlight.airIQTicketId = airIQFlight.rI;
@@ -1336,12 +1310,11 @@ const HomeHero = () => {
 
   useEffect(() => {
     scrollToTop();
-  }, [currentPage]); // ✅ triggers after currentPage updates
+  }, [currentPage]);
 
   const sortedFlights = useMemo(() => {
     const dataToUse =
       filteredFlights?.length > 0 ? filteredFlights : flightdata || [];
-    console.log("aaaaaa", dataToUse);
     const sorted = [...dataToUse];
 
     switch (sortOption) {
@@ -1909,8 +1882,6 @@ const HomeHero = () => {
     }
 
     setFilteredFlights(filtered);
-    console.log("filteredFlights", filteredFlights);
-
     setFiltered(true);
     setShow(false);
   };
@@ -2052,7 +2023,6 @@ const HomeHero = () => {
             )}
             {selectedtab === "stays" ? (
               <>
-                {/* <div className="flight-search-bar"> */}
                 <div className="search-box">
                   <div className="search-row">
                     {/* Location Input */}
@@ -2061,7 +2031,69 @@ const HomeHero = () => {
                         type="text"
                         placeholder="Enter a city, hotel, airport, address or landmark"
                         className="location-input"
+                        value={hotelSearchtext}
+                        onChange={(e) => setHotelSearchText(e.target.value)}
                       />
+
+                      {/* Hotel Results Dropdown */}
+                      {hotelSearchtext &&
+                        (hotel_loading ||
+                          (hotel_data && hotel_data.length > 0)) && (
+                          <div className="hotel-results-dropdown">
+                            {hotel_loading ? (
+                              <div className="hotel-loader">
+                                <div className="spinner"></div>
+                                <span>Searching hotels...</span>
+                              </div>
+                            ) : (
+                              <div className="hotel-results-list">
+                                {hotel_data.map((hotel) => {
+                                  const isSelected = selectedHotel.some(
+                                    (h) => h.referenceId === hotel.referenceId
+                                  );
+                                  return (
+                                    <div
+                                      key={hotel.referenceId}
+                                      className={`hotel-result-item ${
+                                        isSelected ? "selected" : ""
+                                      }`}
+                                      onClick={() => {
+                                        if (isSelected) {
+                                          // Remove hotel from selection
+                                          setSelectedHotel(
+                                            selectedHotel.filter(
+                                              (h) =>
+                                                h.referenceId !==
+                                                hotel.referenceId
+                                            )
+                                          );
+                                        } else {
+                                          setSelectedHotel([
+                                            ...selectedHotel,
+                                            hotel,
+                                          ]);
+                                        }
+                                      }}
+                                    >
+                                      <div>
+                                        <FaHotel size={25} color="#ff6a00" />
+                                      </div>
+                                      <div className="hotel-info">
+                                        <div className="hotel-nameee">
+                                          {hotel.name}
+                                        </div>
+                                        <div className="hotel-location">
+                                          {hotel.city},{" "}
+                                          {hotel.state || hotel.country}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
                     </div>
 
                     {/* Date Range Picker */}
@@ -2171,10 +2203,14 @@ const HomeHero = () => {
                     </div>
 
                     {/* Search Button */}
-                    <button className="search-button-stay">Search</button>
+                    <button
+                      className="search-button-stay"
+                      onClick={() => setStayCondition(true)}
+                    >
+                      Search
+                    </button>
                   </div>
                 </div>
-                {/* </div> */}
               </>
             ) : (
               <>
@@ -9092,6 +9128,8 @@ const HomeHero = () => {
           )} */}
         </>
       )}
+
+      {staycondition && <HomeHeroHotel />}
 
       {/* Drawer Modal for Responsive*/}
 

@@ -1,3 +1,5 @@
+/* HotelBookingDetails.css */
+
 .hotel-container {
   max-width: 1240px;
   margin: 0 auto;
@@ -118,6 +120,7 @@
   grid-template-columns: 2fr 1fr 1fr;
   grid-template-rows: repeat(2, 320px);
   gap: 12px;
+  margin-bottom: 30px;
 }
 
 .gallery-item {
@@ -174,49 +177,246 @@
   background-color: #f0f0f0;
 }
 
-/* React Modal Custom Styles */
-.ReactModal__Overlay {
-  background-color: rgba(0, 0, 0, 0.5) !important;
-  z-index: 999;
+/* New Sections Below Images */
+
+/* Section Title */
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #1a1a1a;
+}
+
+/* Highlights Section */
+.highlights-section {
+  margin-bottom: 25px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+}
+
+.highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.highlight-item {
   display: flex;
-  align-items: flex-end;
-  opacity: 0;
-  transition: opacity 300ms ease-in-out;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  background-color: white;
+  border-radius: 10px;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
 }
 
-.ReactModal__Overlay--after-open {
-  opacity: 1;
+.highlight-item:hover {
+  border-color: #ff6b35;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.15);
+  transform: translateY(-2px);
 }
 
-.ReactModal__Overlay--before-close {
-  opacity: 0;
+.highlight-icon {
+  font-size: 22px;
+  color: #ff6b35;
+  flex-shrink: 0;
 }
 
-.ReactModal__Content {
-  position: relative !important;
-  inset: auto !important;
-  border: none !important;
-  background: white !important;
-  overflow: visible !important;
-  border-radius: 16px 16px 0 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-  max-height: 90vh;
-  min-height: 90vh;
+.highlight-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Facilities Section */
+.facilities-section {
+  margin-bottom: 25px;
+  padding: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+}
+
+.facilities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.facility-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #333;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.facility-item:hover {
+  background-color: #e9ecef;
+}
+
+.facility-icon {
+  color: #4caf50;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* About Section */
+.about-section {
+  margin-bottom: 25px;
+  padding: 20px;
+  background-color: #fff5f2;
+  border-radius: 12px;
+  border-left: 4px solid #ff6b35;
+}
+
+.about-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #444;
+  margin: 0;
+}
+
+/* Landmarks Section */
+.landmarks-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+}
+
+.landmarks-list {
   display: flex;
   flex-direction: column;
-  transform: translateY(100%);
-  transition: transform 300ms ease-in-out;
+  gap: 12px;
 }
 
-.ReactModal__Content--after-open {
-  transform: translateY(0);
+.landmark-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  transition: all 0.3s ease;
 }
 
-.ReactModal__Content--before-close {
-  transform: translateY(100%);
+.landmark-item:hover {
+  background-color: #e9ecef;
+  transform: translateX(5px);
 }
 
+.landmark-icon {
+  font-size: 24px;
+  color: #ff6b35;
+  flex-shrink: 0;
+}
+
+.landmark-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.landmark-distance {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff6b35;
+  padding: 4px 10px;
+  background-color: white;
+  border-radius: 6px;
+}
+
+/* Property Rules Section */
+.property-rules-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+}
+
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.rule-category {
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+}
+
+.rule-category-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #ff6b35;
+}
+
+.rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.rule-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.rule-icon {
+  font-size: 20px;
+  color: #ff6b35;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rule-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.rule-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.rule-value {
+  font-size: 14px;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+/* Responsive adjustments for Property Rules */
+@media (max-width: 768px) {
+  .rules-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .property-rules-section {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+}
+
+/* Modal Styles */
 .modal-header {
   display: flex;
   align-items: center;
@@ -322,6 +522,7 @@
   transform: scale(1.05);
 }
 
+/* Responsive Design */
 @media (max-width: 1024px) {
   .hotel-header {
     flex-direction: column;
@@ -372,5 +573,21 @@
 
   .image-grid {
     grid-template-columns: 1fr;
+  }
+
+  .highlights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .facilities-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .highlights-section,
+  .facilities-section,
+  .about-section,
+  .landmarks-section {
+    padding: 15px;
+    margin-bottom: 20px;
   }
 }

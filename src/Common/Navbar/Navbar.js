@@ -6,12 +6,11 @@ import images from "../../Constants/images";
 import { RiMenu3Fill, RiCloseFill } from "react-icons/ri";
 import { IoCloseCircle, IoLogOut } from "react-icons/io5";
 import ReactModal from "react-modal";
-import { FaUser } from "react-icons/fa";
 import { useAuthContext } from "../../Context/auth_context";
 import { useDropzone } from "react-dropzone";
 import axios from "axios";
 import { FaUserPlus } from "react-icons/fa";
-import { MdDashboard, MdLogout } from "react-icons/md";
+import { MdDashboard } from "react-icons/md";
 import {
   ACCEPT_HEADER,
   bookseatdetails,
@@ -19,17 +18,12 @@ import {
   get_state,
   getcompanylist,
   getcurrentaccountbalance,
-  TicketStatus,
-  TicketStatusApi,
   verifyCall,
   walletApi,
 } from "../../Utils/Constant";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { GrGoogle } from "react-icons/gr";
 import { jwtDecode } from "jwt-decode";
-import { LoginSocialFacebook } from "reactjs-social-login";
-import { SiFacebook } from "react-icons/si";
-import { LOGIN_BEGIN_AIR_LIVE } from "../../Actions";
 import { useBusContext } from "../../Context/bus_context";
 import Notification from "../../Utils/Notification";
 import { useFlightContext } from "../../Context/flight_context";
@@ -52,6 +46,7 @@ const customStyles = {
     backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
 };
+
 const Navbar = () => {
   const {
     GetBookSeatDetailsApi,
@@ -215,8 +210,6 @@ const Navbar = () => {
   };
 
   const handlePrintPNR = () => {
-    // your print logic here
-    // window.print(); // or custom print logic
     getPrintTicket();
   };
 
@@ -268,7 +261,6 @@ const Navbar = () => {
   };
 
   const Login = async (e) => {
-    // Create JSON object (Raw Data format)
     const params = {
       Username: "9555202202",
       Password: "112233344",

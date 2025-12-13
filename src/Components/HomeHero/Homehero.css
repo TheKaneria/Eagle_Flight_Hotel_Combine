@@ -504,6 +504,7 @@
 /* Location Input */
 .location-input-wrapper {
   width: 360px;
+  position: relative;
 }
 
 .location-input {
@@ -514,11 +515,113 @@
   border: none;
   padding-left: 10px;
   outline: none;
-  /* background-color: red; */
 }
 
 .location-input::placeholder {
   color: #999;
+}
+
+/* Hotel Results Dropdown */
+.hotel-results-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  border: 1px solid #e5e5e5;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Loader */
+.hotel-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  gap: 12px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #ff6a00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.hotel-loader span {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Hotel Results List */
+.hotel-results-list {
+  padding: 8px 0;
+}
+
+.hotel-result-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  gap: 12px;
+  justify-content: center;
+}
+
+.hotel-result-item:hover {
+  background-color: #f9f9f9;
+}
+
+.hotel-result-item.selected {
+  background-color: #fff5e6;
+}
+
+.hotel-result-item.selected:hover {
+  background-color: #ffe8cc;
+}
+
+.hotel-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.hotel-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.hotel-nameee {
+  font-size: 15px;
+  font-weight: 500;
+  color: #111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotel-location {
+  font-size: 13px;
+  color: #666;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Date Picker */
@@ -622,7 +725,6 @@
 
 /* Search Button */
 .search-button-stay {
-  /* padding: 0 32px; */
   background-color: #ff6a00;
   color: white;
   font-weight: 500;
@@ -638,6 +740,25 @@
 
 .search-button-stay:hover {
   background-color: #e55f00;
+}
+
+/* Scrollbar styling for dropdown */
+.hotel-results-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hotel-results-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.hotel-results-dropdown::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 8px;
+}
+
+.hotel-results-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }
 .flightcounter2 {
   width: 90%;
